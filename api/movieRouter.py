@@ -14,7 +14,13 @@ def get_movie_service() -> IMovieService:
     return MovieService(repository)
 
 @movie_router.get("/{movie_id}")
-async def get_movie_by_id(movie_id: str, service: IMovieService = Depends(get_movie_service)):
+async def get_movie_by_id(movie_id: int, service: IMovieService = Depends(get_movie_service)):
+    """
+    Returns the details for a movie based on the movie id
+    :param movie_id: the movie id to get
+    :param service: the service to call to get the info
+    :return: the details of the movie / or a 404 error if the id does not exist
+    """
     movie = service.find_by_id(movie_id)
     if movie:
         return movie
