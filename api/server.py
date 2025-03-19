@@ -5,6 +5,7 @@ from fastapi.applications import AppType
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.movieRouter import movie_router
+from api.recommendationRouter import recommendation_router
 
 
 load_dotenv()
@@ -24,4 +25,5 @@ def initServer(app: FastAPI) -> AppType:
     )
 
     app.include_router(movie_router)
+    app.include_router(recommendation_router)
     return app
