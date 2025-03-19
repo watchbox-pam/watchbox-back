@@ -2,8 +2,8 @@ from fastapi import APIRouter
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
 
-from domain.interfaces.i_movie_repository import IMovieRepository
-from domain.interfaces.i_movie_service import IMovieService
+from domain.interfaces.repositories.i_movie_repository import IMovieRepository
+from domain.interfaces.services.i_movie_service import IMovieService
 from repository.movie_repository import MovieRepository
 from service.movie_service import MovieService
 

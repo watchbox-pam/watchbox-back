@@ -1,7 +1,7 @@
 from typing import Optional
 
-from domain.interfaces.i_movie_repository import IMovieRepository
-from domain.interfaces.i_movie_service import IMovieService
+from domain.interfaces.repositories.i_movie_repository import IMovieRepository
+from domain.interfaces.services.i_movie_service import IMovieService
 from domain.models.movie import Movie
 
 
