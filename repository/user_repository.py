@@ -34,7 +34,7 @@ class UserRepository(IUserRepository):
 
 
     def get_user_by_username(self, username: str) -> Optional[User]:
-        user: Optional[User]
+        user: Optional[User] = None
         try:
             with db_config.connect_to_db() as conn:
 
@@ -42,7 +42,25 @@ class UserRepository(IUserRepository):
 
                     cur.execute("SELECT * FROM public.user WHERE username=%s;", (username,))
 
-                    user = cur.fetchone()
+                    result = cur.fetchone()
+
+                    if result is not None:
+                        user = User(
+                            id=result[0],
+                            username=result[1],
+                            email=result[2],
+                            password=result[3],
+                            birthdate=result[4],
+                            country=result[5],
+                            profile_picture_path=result[6],
+                            banner_path=result[7],
+                            is_private=result[8],
+                            history_private=result[9],
+                            adult_content=result[10],
+                            last_connection=result[11],
+                            created_at=result[12],
+                            salt=result[13],
+                        )
 
         except (Exception) as e:
             print(e)
@@ -51,7 +69,7 @@ class UserRepository(IUserRepository):
 
 
     def get_user_by_email(self, email: str) -> Optional[User]:
-        user: Optional[User]
+        user: Optional[User] = None
         try:
             with db_config.connect_to_db() as conn:
 
@@ -59,7 +77,25 @@ class UserRepository(IUserRepository):
 
                     cur.execute("SELECT * FROM public.user WHERE email=%s;", (email,))
 
-                    user = cur.fetchone()
+                    result = cur.fetchone()
+
+                    if result is not None:
+                        user = User(
+                            id=result[0],
+                            username=result[1],
+                            email=result[2],
+                            password=result[3],
+                            birthdate=result[4],
+                            country=result[5],
+                            profile_picture_path=result[6],
+                            banner_path=result[7],
+                            is_private=result[8],
+                            history_private=result[9],
+                            adult_content=result[10],
+                            last_connection=result[11],
+                            created_at=result[12],
+                            salt=result[13],
+                        )
 
         except (Exception) as e:
             print(e)
