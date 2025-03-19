@@ -1,10 +1,12 @@
 import os
+from typing import Optional
+
 import psycopg
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def connect_to_db():
+def connect_to_db() -> Optional[psycopg.connection.Connection]:
     conn = None
     try:
         params = {
@@ -15,7 +17,7 @@ def connect_to_db():
             "port": os.getenv("DATABASE_PORT")
         }
 
-        conn = psycopg.connect(**params)
+        conn: psycopg.connection.Connection = psycopg.connect(**params)
 
         return conn
     except(Exception, psycopg.DatabaseError) as error:

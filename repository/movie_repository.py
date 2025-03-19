@@ -1,6 +1,6 @@
 from typing import Optional
 
-from domain.interfaces.i_movie_repository import IMovieRepository
+from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.models.movie import Movie
 from utils.tmdb_service import call_tmdb_api
 
