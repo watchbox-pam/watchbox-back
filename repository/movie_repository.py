@@ -1,7 +1,7 @@
 from typing import Optional
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
-from domain.models.movie import Movie
+from domain.models.movie import Movie, PopularMovieList
 from utils.tmdb_service import call_tmdb_api
 
 
@@ -30,3 +30,19 @@ class MovieRepository(IMovieRepository):
         )
 
         return movie
+    
+    def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
+        endpoint = f"/trending/movie/{time_window}?page={page}"
+
+        result = call_tmdb_api(endpoint)
+
+        print(result)
+
+        movies = PopularMovieList(
+            page=result["page"],
+            results=result["results"],
+            total_results=result["total_pages"],
+            total_pages=result["total_results"]
+        )
+
+        return movies
