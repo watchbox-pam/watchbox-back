@@ -1,6 +1,5 @@
 from typing import Optional
 
-from domain.interfaces.i_movie_repository import IMovieRepository
 from domain.models.release_dates import ReleaseDates
 from utils.tmdb_service import call_tmdb_api
 from domain.interfaces.i_release_dates_repository import IReleaseDatesRepository

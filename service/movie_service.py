@@ -1,8 +1,8 @@
 from typing import Optional
 
-from domain.interfaces.i_movie_repository import IMovieRepository
-from domain.interfaces.i_movie_service import IMovieService
-from domain.models.movie import Movie
+from domain.interfaces.repositories.i_movie_repository import IMovieRepository
+from domain.interfaces.services.i_movie_service import IMovieService
+from domain.models.movie import Movie, MovieDetail
 from domain.interfaces.i_release_dates_repository import IReleaseDatesRepository
 from domain.interfaces.i_credits_repository import ICreditsRepository
 from domain.interfaces.i_videos_repository import IVideosRepository
@@ -16,7 +16,7 @@ class MovieService(IMovieService):
         self.videos_repository = videos_repository
         self.watch_providers_repository = watch_providers_repository
 
-    def find_by_id(self, movie_id: int) -> Optional[Movie]:
+    def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
         movie = self.repository.find_by_id(movie_id)
         release_dates = self.release_dates_repository.find_by_id(movie_id)
         credits = self.credits_repository.find_by_id(movie_id)
@@ -54,3 +54,10 @@ class MovieService(IMovieService):
             "providers": france_providers
             }
         return combined
+
+    def search(self, search_term: str) -> Optional[list[Movie]]:
+        return self.repository.search(search_term)
+
+    def find_by_time_window(self, time_window: str, page: int) -> Optional[Movie]:
+            movie = self.repository.find_by_time_window(time_window, page)
+            return movie
