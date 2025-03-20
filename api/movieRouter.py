@@ -6,12 +6,24 @@ from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
 from repository.movie_repository import MovieRepository
 from service.movie_service import MovieService
+from repository.release_dates_repository import ReleaseDateRepository
+from domain.interfaces.i_release_dates_repository import IReleaseDatesRepository
+from repository.credits_repository import CreditsRepository
+from domain.interfaces.i_credits_repository import ICreditsRepository
+from repository.videos_repository import VideosRepository
+from domain.interfaces.i_videos_repository import IVideosRepository
+from repository.watch_providers_repository import WatchProvidersRepository
+from domain.interfaces.i_watch_providers_repository import IWatchProvidersRepository
 
 movie_router = APIRouter(prefix="/movies", tags=["Movies"])
 
 def get_movie_service() -> IMovieService:
     repository: IMovieRepository = MovieRepository()
-    return MovieService(repository)
+    release_dates_repository: IReleaseDatesRepository = ReleaseDateRepository()
+    credits_repository: ICreditsRepository = CreditsRepository()
+    videos_repository: IVideosRepository = VideosRepository()
+    watch_providers_repository: IWatchProvidersRepository = WatchProvidersRepository()
+    return MovieService(repository, release_dates_repository, credits_repository, videos_repository, watch_providers_repository)
 
 @movie_router.get("/{movie_id}")
 async def get_movie_by_id(movie_id: int, service: IMovieService = Depends(get_movie_service)):

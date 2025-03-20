@@ -1,21 +1,22 @@
 from typing import Optional
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
-from domain.models.movie import Movie, PopularMovieList
+from domain.models.movie import Movie, PopularMovieList, MovieDetail
 from utils.tmdb_service import call_tmdb_api
 
 
 class MovieRepository(IMovieRepository):
-    def find_by_id(self, movie_id: int) -> Optional[Movie]:
+    def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
         endpoint = f"/movie/{movie_id}?language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
-        movie = Movie(
+        movie = MovieDetail(
             id=result["id"],
             adult=result["adult"],
             backdrop_path=result["backdrop_path"],
             budget=result["budget"],
+            genres=result["genres"],
             original_language=result["original_language"],
             original_title=result["original_title"],
             overview=result["overview"],
