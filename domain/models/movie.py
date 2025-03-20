@@ -1,6 +1,9 @@
 from datetime import date
 from dataclasses import dataclass
 
+class Genre:
+    id: int
+    name: str
 
 @dataclass(frozen=True)
 class Movie:
@@ -8,6 +11,7 @@ class Movie:
     adult: bool
     backdrop_path: str
     budget: int
+    genres: list[Genre]
     original_language: str
     original_title: str
     overview: str

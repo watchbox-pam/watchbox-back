@@ -16,6 +16,7 @@ class MovieRepository(IMovieRepository):
             adult=result["adult"],
             backdrop_path=result["backdrop_path"],
             budget=result["budget"],
+            genres=result["genres"],
             original_language=result["original_language"],
             original_title=result["original_title"],
             overview=result["overview"],
