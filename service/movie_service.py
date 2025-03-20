@@ -12,3 +12,7 @@ class MovieService(IMovieService):
     def find_by_id(self, movie_id: int) -> Optional[Movie]:
         movie = self.repository.find_by_id(movie_id)
         return movie
+
+
+    def search(self, search_term: str) -> Optional[list[Movie]]:
+        return self.repository.search(search_term)
