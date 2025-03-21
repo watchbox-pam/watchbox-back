@@ -66,8 +66,6 @@ class MovieRepository(IMovieRepository):
 
         result = call_tmdb_api(endpoint)
 
-        print(result)
-
         movies = PopularMovieList(
             page=result["page"],
             results=result["results"],
