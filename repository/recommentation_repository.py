@@ -28,3 +28,19 @@ class RecommendationRepository(IRecommendationRepository):
                 movies.append(movie)
 
         return movies
+
+    def get_popular_this_week(self, limit: int = 10) -> List[MovieListItem]:
+        endpoint = f"/trending/movie/week?language=fr-FR&page=1"
+        result = call_tmdb_api(endpoint)
+
+        movies = []
+        if "results" in result:
+            for movie_data in result["results"][:limit]:
+                movie = MovieListItem(
+                    id=movie_data["id"],
+                    title=movie_data.get("title", ""),
+                    poster_path=movie_data.get("poster_path", "")
+                )
+                movies.append(movie)
+
+        return movies

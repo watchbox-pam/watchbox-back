@@ -11,3 +11,6 @@ class RecommendationService(IRecommendationService):
 
     def get_by_emotion(self, emotion: Emotion, limit: int = 10) -> List[MovieListItem]:
         return self.repository.get_by_emotion(emotion, limit)
+
+    def get_popular_this_week(self, limit: int = 10) -> List[MovieListItem]:
+        return self.repository.get_popular_this_week(limit)

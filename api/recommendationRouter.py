@@ -29,3 +29,16 @@ async def get_movies_by_emotion(
     :return: a list of movies matching the emotion
     """
     return service.get_by_emotion(emotion, limit)
+
+@recommendation_router.get("/popular/week")
+async def get_popular_movies_this_week(
+    limit: int = Query(10, ge=1, le=50),
+    service: IRecommendationService = Depends(get_recommendation_service)
+) -> List[MovieListItem]:
+    """
+    Returns a list of popular movies from this week for the homepage
+    :param limit: the maximum number of movies to return
+    :param service: the service to call to get the movies
+    :return: a list of popular movies for this week
+    """
+    return service.get_popular_this_week(limit)
