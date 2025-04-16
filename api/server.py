@@ -1,9 +1,10 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.applications import AppType
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.auth.verify_auth_token import check_jwt_token
 from api.countryRouter import country_router
 from api.movieRouter import movie_router
 from api.recommendationRouter import recommendation_router
@@ -26,10 +27,8 @@ def initServer(app: FastAPI) -> AppType:
         allow_headers=["*"]
     )
 
-
-
     app.include_router(country_router)
-    app.include_router(movie_router)
-    app.include_router(recommendation_router)
+    app.include_router(movie_router, dependencies=[Depends(check_jwt_token)])
+    app.include_router(recommendation_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(user_router)
     return app
