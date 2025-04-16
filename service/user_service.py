@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from hashlib import sha256
 from typing import Optional
 
+from api.auth.verify_auth_token import create_jwt_token
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.user import User
@@ -22,15 +23,15 @@ class UserService(IUserService):
 
         username_exists = self.get_user_by_username(user.username)
         if username_exists is not None:
-            return "Ce pseudo est déjà utilisé"
+            raise Exception("Ce pseudo est déjà utilisé")
 
         pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
         if re.match(pattern, user.email) is None:
-            return "Cette adresse mail n'est pas valide"
+            raise Exception("Cette adresse mail n'est pas valide")
 
         email_exists = self.get_user_by_email(user.email)
         if email_exists is not None:
-            return "Cette adresse mail est déjà utilisée"
+            raise Exception("Cette adresse mail est déjà utilisée")
 
         user_id: uuid = uuid.uuid4()
         user.id = str(user_id)
@@ -40,8 +41,12 @@ class UserService(IUserService):
         if self.repository.create_user(user):
             return str(user_id)
         else:
-            return ""
+            raise Exception("La création de l'utilisateur a échoué")
 
+
+    def get_user_by_id(self, id: str) -> Optional[User]:
+        user = self.repository.get_user_by_id(id)
+        return user
 
     def get_user_by_username(self, username: str) -> Optional[User]:
         user = self.repository.get_user_by_username(username)
@@ -53,22 +58,25 @@ class UserService(IUserService):
         return user
 
 
-    def login_user(self, user: UserLogin) -> Optional[str]:
+    def login_user(self, user: UserLogin) -> dict[str, str]:
         user_exists: User
         if "@" in user.identifier:
+            # Check if email exists in base
             user_exists = self.get_user_by_email(user.identifier)
         else:
+            # Check if username exists in base
             user_exists = self.get_user_by_username(user.identifier)
 
         if user_exists is None:
-            return "Utilisateur non trouvé"
+            raise Exception("Utilisateur non trouvé")
 
-        salted_password = sha256((user.password + user_exists.salt).encode('utf-8'))
+        salted_password = sha256((user.password + user_exists.salt).encode('utf-8')).hexdigest()
 
         pepper = os.getenv("PEPPER")
-        hashed_password = sha256((salted_password.hexdigest() + pepper).encode('utf-8'))
+        hashed_password = sha256((salted_password + pepper).encode('utf-8'))
 
         if hashed_password.hexdigest() == user_exists.password:
-            return user_exists.id
+            user_token = create_jwt_token({ "user_id": str(user_exists.id) })
+            return { "user_id": str(user_exists.id), "token": user_token }
         else:
-            return "Mot de passe incorrect"
+            raise Exception("Mot de passe incorrect")
