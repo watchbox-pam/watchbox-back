@@ -13,3 +13,6 @@ class IUserRepository(Protocol):
 
     def get_user_by_email(self, email: str) -> Optional[User]:
         ...
+
+    def get_user_by_id(self, id: str) -> Optional[User]:
+        ...
