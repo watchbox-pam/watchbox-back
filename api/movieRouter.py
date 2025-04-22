@@ -43,7 +43,7 @@ async def get_movie_by_id(movie_id: int, service: IMovieService = Depends(get_mo
 @movie_router.get("/search/{search}")
 async def search_movies(search: str, service: IMovieService = Depends(get_movie_service)):
     movies = service.search(search)
-    if movies:
+    if movies is not None:
         return movies
     else:
         raise HTTPException(status_code=404, detail="Movies not found")
