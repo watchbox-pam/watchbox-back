@@ -23,7 +23,7 @@ async def create_user(user: UserSignup, service: IUserService = Depends(get_user
     try:
         user_id = service.create_user(user)
         if user_id:
-            return {"user_id": user_id}
+            return user_id
         else:
             raise HTTPException(status_code=400, detail="L'inscription a échoué")
     except Exception as error:

@@ -19,7 +19,7 @@ class UserService(IUserService):
     def __init__(self, repository: IUserRepository):
         self.repository = repository
 
-    def create_user(self, user: UserSignup) -> Optional[str]:
+    def create_user(self, user: UserSignup) -> dict[str, str]:
 
         username_exists = self.get_user_by_username(user.username)
         if username_exists is not None:
@@ -39,7 +39,8 @@ class UserService(IUserService):
         hashed_password = sha256((user.password + pepper).encode('utf-8'))
         user.password = hashed_password.hexdigest()
         if self.repository.create_user(user):
-            return str(user_id)
+            user_token = create_jwt_token({"user_id": str(user_id)})
+            return { "user_id": str(user_id), "token": user_token }
         else:
             raise Exception("La création de l'utilisateur a échoué")
 

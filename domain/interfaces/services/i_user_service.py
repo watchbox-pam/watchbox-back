@@ -6,7 +6,7 @@ from domain.models.userSignup import UserSignup
 
 
 class IUserService(Protocol):
-    def create_user(self, user: UserSignup) -> Optional[str]:
+    def create_user(self, user: UserSignup) -> dict[str, str]:
         ...
 
     def get_user_by_username(self, username: str) -> Optional[User]:
