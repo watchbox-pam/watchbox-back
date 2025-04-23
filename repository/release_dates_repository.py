@@ -2,7 +2,7 @@ from typing import Optional
 
 from domain.models.release_dates import ReleaseDates
 from utils.tmdb_service import call_tmdb_api
-from domain.interfaces.i_release_dates_repository import IReleaseDatesRepository
+from domain.interfaces.repositories.i_release_dates_repository import IReleaseDatesRepository
 
 
 class ReleaseDateRepository(IReleaseDatesRepository):
