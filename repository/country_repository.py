@@ -10,7 +10,7 @@ class CountryRepository(ICountryRepository):
 
         with db_config.connect_to_db() as conn:
             with conn.cursor() as cur:
-                query = "SELECT * FROM public.country;"
+                query = "SELECT * FROM public.country WHERE exists=true;"
 
                 cur.execute(query)
                 result = cur.fetchall()
