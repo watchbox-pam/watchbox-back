@@ -2,7 +2,7 @@ from typing import Optional
 
 from domain.models.credits import Credits
 from utils.tmdb_service import call_tmdb_api
-from domain.interfaces.i_credits_repository import ICreditsRepository
+from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
 
 
 class CreditsRepository(ICreditsRepository):

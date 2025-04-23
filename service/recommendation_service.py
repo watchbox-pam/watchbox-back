@@ -1,6 +1,6 @@
 from typing import List
-from domain.interfaces.i_recommendation_repository import IRecommendationRepository
-from domain.interfaces.i_recommendation_service import IRecommendationService
+from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
+from domain.interfaces.services.i_recommendation_service import IRecommendationService
 from domain.models.movie_list_item import MovieListItem
 from domain.models.emotion import Emotion
 

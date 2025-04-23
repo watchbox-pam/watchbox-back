@@ -1,6 +1,6 @@
 from typing import List
 import random
-from domain.interfaces.i_recommendation_repository import IRecommendationRepository
+from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
 from domain.models.movie_list_item import MovieListItem
 from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
 from utils.tmdb_service import call_tmdb_api
