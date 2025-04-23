@@ -22,7 +22,6 @@ async def get_person_by_id(person_id: int, service: IPersonService = Depends(get
     :return: the details of the person / or a 404 error if the id does not exist
     """
     person = service.find_by_id(person_id)
-    print(person)
     if person:
         return person
     else:

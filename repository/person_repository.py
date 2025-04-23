@@ -13,18 +13,11 @@ class PersonRepository(IPersonRepository):
 
         person = {
             "id": result["id"],
-            # "adult": result["adult"],
-            # "also_known_as": result["also_known_as"],
             "biography": result["biography"],
             "birthday": result["birthday"],
             "deathday": result["deathday"],
-            # "gender": result["gender"],
-            # "homepage": result["homepage"],
-            # "imdb_id": result["imdb_id"],
-            # "known_for_department": result["known_for_department"],
             "name": result["name"],
             "place_of_birth": result["place_of_birth"],
-            # "popularity": result["popularity"],
             "profile_path": result["profile_path"],
         }
         
