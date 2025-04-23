@@ -114,3 +114,19 @@ class PlaylistRepository:
             print(e)
 
         return playlists
+
+    def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
+        success: bool = False
+
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = "INSERT INTO public.playlist_media (playlist_id, movie_id, add_date) VALUES (%s, %s, %s);"
+                    add_date = datetime.datetime.now()
+                    cur.execute(query, (playlist_id, media_id, add_date))
+                    success = True
+
+        except Exception as e:
+            print(e)
+
+        return success

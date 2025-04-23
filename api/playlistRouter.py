@@ -46,6 +46,17 @@ async def get_playlist_by_id(playlist_id: int, service: IPlaylistService = Depen
     return playlist
 
 @playlist_router.get("/user/{user_id}", response_model=List[Playlist])
-async def get_playlists_by_user_id(user_id: int, service: IPlaylistService = Depends(get_playlist_service)):
+async def get_playlists_by_user_id(user_id: str, service: IPlaylistService = Depends(get_playlist_service)):
     playlists = service.get_playlists_by_user_id(user_id)
     return playlists
+
+@playlist_router.post("/{playlist_id}/media/{media_id}", response_model=bool)
+async def add_media_to_playlist(
+    playlist_id: str,
+    media_id: int,
+    service: IPlaylistService = Depends(get_playlist_service)
+):
+    success = service.add_media_to_playlist(playlist_id, media_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Erreur lors de l'ajout du média à la playlist")
+    return success

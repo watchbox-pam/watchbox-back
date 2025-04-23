@@ -16,3 +16,6 @@ class IPlaylistService(Protocol):
 
     def get_playlists_by_user_id(self, user_id: int) -> List[Playlist]:
         ...
+
+    def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
+        ...

@@ -1,4 +1,9 @@
+import uuid
+
 from typing import Optional, List
+
+from fastapi import HTTPException
+
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.playlist import Playlist
 
@@ -8,16 +13,31 @@ class PlaylistService:
         self.repository = repository
 
     def create_playlist(self, playlist: Playlist) -> bool:
-        return self.repository.create_playlist(playlist)
+        existing_playlists = self.repository.get_playlists_by_user_id(playlist.user_id)
+        if any(p.title == playlist.title for p in existing_playlists):
+            raise HTTPException(status_code=400, detail="Playlist déjà existante pour cet utilisateur.")
 
-    def delete_playlist(self, playlist_id: int) -> bool:
+        playlist_id: str = str(uuid.uuid4())
+        new_playlist = Playlist(
+            id=playlist_id,
+            user_id=playlist.user_id,
+            title=playlist.title,
+            created_at=playlist.created_at,
+            is_private=playlist.is_private
+        )
+        return self.repository.create_playlist(new_playlist)
+
+    def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
+        return self.repository.add_media_to_playlist(playlist_id, media_id)
+
+    def delete_playlist(self, playlist_id: str) -> bool:
         return self.repository.delete_playlist(playlist_id)
 
-    def update_playlist(self, playlist_id: int, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+    def update_playlist(self, playlist_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
         return self.repository.update_playlist(playlist_id, title, is_private)
 
-    def get_playlist_by_id(self, playlist_id: int) -> Optional[Playlist]:
+    def get_playlist_by_id(self, playlist_id: str) -> Optional[Playlist]:
         return self.repository.get_playlist_by_id(playlist_id)
 
-    def get_playlists_by_user_id(self, user_id: int) -> List[Playlist]:
+    def get_playlists_by_user_id(self, user_id: str) -> List[Playlist]:
         return self.repository.get_playlists_by_user_id(user_id)

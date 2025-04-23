@@ -9,6 +9,7 @@ from api.countryRouter import country_router
 from api.movieRouter import movie_router
 from api.recommendationRouter import recommendation_router
 from api.userRouter import user_router
+from api.playlistRouter import playlist_router
 
 
 load_dotenv()
@@ -31,4 +32,5 @@ def initServer(app: FastAPI) -> AppType:
     app.include_router(movie_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(recommendation_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(user_router)
+    app.include_router(playlist_router, dependencies=[Depends(check_jwt_token)])
     return app
