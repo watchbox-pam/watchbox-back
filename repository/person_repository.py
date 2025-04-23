@@ -28,9 +28,11 @@ class PersonRepository(IPersonRepository):
                 "title": item.get("title"),
                 "poster_path": item.get("poster_path"),
                 "media_type": item.get("media_type"),
+                "popularity": item.get("popularity")
             }
             for item in result["combined_credits"]["cast"]
         ]
+        refactored_cast = sorted(refactored_cast, key=lambda x: x.get("popularity", 0), reverse=True)
 
         refactored_crew = [
             {
@@ -38,9 +40,11 @@ class PersonRepository(IPersonRepository):
                 "title": item.get("title"),
                 "poster_path": item.get("poster_path"),
                 "media_type": item.get("media_type"),
+                "popularity": item.get("popularity")
             }
             for item in result["combined_credits"]["crew"]
         ]
+        refactored_crew = sorted(refactored_crew, key=lambda x: x.get("popularity", 0), reverse=True)
 
         combined_credits = {
             "cast": refactored_cast,

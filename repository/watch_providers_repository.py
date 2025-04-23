@@ -1,6 +1,6 @@
 from typing import Optional
 
-from domain.interfaces.i_watch_providers_repository import IWatchProvidersRepository
+from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
 from domain.models.watch_providers import WatchProviders
 from utils.tmdb_service import call_tmdb_api
 
