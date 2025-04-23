@@ -3,10 +3,10 @@ from typing import Optional
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
 from domain.models.movie import Movie, MovieDetail
-from domain.interfaces.i_release_dates_repository import IReleaseDatesRepository
-from domain.interfaces.i_credits_repository import ICreditsRepository
-from domain.interfaces.i_videos_repository import IVideosRepository
-from domain.interfaces.i_watch_providers_repository import IWatchProvidersRepository
+from domain.interfaces.repositories.i_release_dates_repository import IReleaseDatesRepository
+from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
+from domain.interfaces.repositories.i_videos_repository import IVideosRepository
+from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
 
 class MovieService(IMovieService):
     def __init__(self, repository: IMovieRepository, release_dates_repository: IReleaseDatesRepository, credits_repository: ICreditsRepository, videos_repository: IVideosRepository, watch_providers_repository: IWatchProvidersRepository):
