@@ -1,12 +1,15 @@
-from typing import Optional
+from typing import Optional, List
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
+from domain.models.emotion import Emotion
 from domain.models.movie import Movie, MovieDetail
 from domain.interfaces.repositories.i_release_dates_repository import IReleaseDatesRepository
 from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
 from domain.interfaces.repositories.i_videos_repository import IVideosRepository
 from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
+from domain.models.movieRecommendation import MovieRecommendation
+
 
 class MovieService(IMovieService):
     def __init__(self, repository: IMovieRepository, release_dates_repository: IReleaseDatesRepository, credits_repository: ICreditsRepository, videos_repository: IVideosRepository, watch_providers_repository: IWatchProvidersRepository):
@@ -61,3 +64,10 @@ class MovieService(IMovieService):
     def find_by_time_window(self, time_window: str, page: int) -> Optional[Movie]:
             movie = self.repository.find_by_time_window(time_window, page)
             return movie
+
+    def find_by_ids_recommendation(self, ids: List[int]):
+        return self.repository.find_by_ids_recommendation(ids)
+
+
+    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
+        return self.repository.find_by_genres(genres)

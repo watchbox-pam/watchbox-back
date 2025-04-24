@@ -1,6 +1,8 @@
-from typing import Protocol, Optional
+from typing import Protocol, Optional, List
 
 from domain.models.movie import Movie, PopularMovieList, MovieDetail
+from domain.models.movieRecommendation import MovieRecommendation
+
 
 class IMovieService(Protocol):
     def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
@@ -10,4 +12,10 @@ class IMovieService(Protocol):
         ...
 
     def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
+        ...
+
+    def find_by_ids_recommendation(self, ids: List[int]):
+        ...
+
+    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
         ...
