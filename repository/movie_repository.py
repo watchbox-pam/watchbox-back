@@ -85,11 +85,14 @@ class MovieRepository(IMovieRepository):
                     query = ("SELECT "
                     "DISTINCT(m.id), "
                     "array_agg(DISTINCT mg.genre_id) AS genre_ids, "
-                    "array_agg(DISTINCT mk.keyword_id) AS keyword_ids "
+                    "array_agg(DISTINCT mk.keyword_id) AS keyword_ids, "
+                    "array_agg(DISTINCT (c.person_id, c.job_id)) AS credit_ids "
                     "FROM public.movie m "
                     "INNER JOIN public.movie_movie_genre mg ON mg.movie_id = m.id "
                     "INNER JOIN public.media_keyword mk ON mk.movie_id = m.id "
+                    "INNER JOIN public.credit c ON c.movie_id = m.id "
                     "WHERE m.id = ANY(%s) "
+                    "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537))"
                     "GROUP BY m.id;")
 
                     cur.execute(query, (ids,))
@@ -97,12 +100,17 @@ class MovieRepository(IMovieRepository):
 
                     if results is not None:
                         for result in results:
+                            credits = []
+                            for credit in result[3]:
+                                credits.append({ "person_id": credit[0], "job_id": credit[1] })
                             medias.append(MovieRecommendation(
                                 id=result[0],
                                 genres=result[1],
                                 keywords=result[2],
-                                cast=[],
-                                crew=[],
+                                credits=credits,
+                                poster_path="",
+                                popularity=0,
+                                title="",
                                 weight=0
                             ))
 
@@ -118,11 +126,16 @@ class MovieRepository(IMovieRepository):
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
                     query = ("SELECT "
-                             "movie_id as id, MAX(m.popularity) as popularity, m.title as title, MAX(m.poster_path) as poster_path, "
-                             "array_agg(DISTINCT mg.genre_id) AS genre_ids "
+                             "mg.movie_id as id, MAX(m.popularity) as popularity, m.title as title, MAX(m.poster_path) as poster_path, "
+                             "array_agg(DISTINCT mg.genre_id) AS genre_ids, "
+                             "array_agg(DISTINCT mk.keyword_id) AS keyword_ids, "
+                             "array_agg(DISTINCT (c.person_id, c.job_id)) AS credit_ids "
                              "FROM public.movie_movie_genre mg "
                              "INNER JOIN public.movie m on m.id = mg.movie_id "
-                             "WHERE mg.genre_id = ANY(%s)"
+                             "INNER JOIN public.media_keyword mk ON mk.movie_id = m.id "
+                             "INNER JOIN public.credit c ON c.movie_id = m.id "
+                             "WHERE mg.genre_id = ANY(%s) "
+                             "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537))"
                              "group by mg.movie_id, m.title;")
 
                     cur.execute(query, (genres,))
@@ -130,15 +143,17 @@ class MovieRepository(IMovieRepository):
 
                     if results is not None:
                         for result in results:
+                            credits = []
+                            for credit in result[6]:
+                                credits.append({"person_id": credit[0], "job_id": credit[1]})
                             medias.append(MovieRecommendation(
                                 id=result[0],
                                 popularity=result[1],
                                 title=result[2],
                                 poster_path=result[3],
                                 genres=result[4],
-                                keywords=[],
-                                cast=[],
-                                crew=[],
+                                keywords=result[5],
+                                credits=credits,
                                 weight=0
                             ))
 

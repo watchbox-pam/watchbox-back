@@ -16,5 +16,4 @@ class MovieRecommendation:
     title: str
     genres: List[Genre]
     keywords: List[Keyword]
-    cast: List[PersonDetail]
-    crew: List[PersonDetail]
+    credits: List[PersonDetail]
