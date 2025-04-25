@@ -7,13 +7,13 @@ from domain.interfaces.services.i_movie_service import IMovieService
 from repository.movie_repository import MovieRepository
 from service.movie_service import MovieService
 from repository.release_dates_repository import ReleaseDateRepository
-from domain.interfaces.i_release_dates_repository import IReleaseDatesRepository
+from domain.interfaces.repositories.i_release_dates_repository import IReleaseDatesRepository
 from repository.credits_repository import CreditsRepository
-from domain.interfaces.i_credits_repository import ICreditsRepository
+from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
 from repository.videos_repository import VideosRepository
-from domain.interfaces.i_videos_repository import IVideosRepository
+from domain.interfaces.repositories.i_videos_repository import IVideosRepository
 from repository.watch_providers_repository import WatchProvidersRepository
-from domain.interfaces.i_watch_providers_repository import IWatchProvidersRepository
+from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
 
 movie_router = APIRouter(prefix="/movies", tags=["Movies"])
 
