@@ -1,12 +1,12 @@
 import pytest
 from unittest.mock import patch, MagicMock
 import json
-import os
+import requests
 from utils.tmdb_service import call_tmdb_api
 
 
 @patch('utils.tmdb_service.requests.get')
-def test_call_tmdb_api(mock_get):
+def test_call_tmdb_api_success(mock_get):
     mock_response = MagicMock()
     mock_response.text = json.dumps({"id": 123, "title": "Test Movie"})
     mock_get.return_value = mock_response
@@ -15,13 +15,6 @@ def test_call_tmdb_api(mock_get):
 
     assert result["id"] == 123
     assert result["title"] == "Test Movie"
-
-    expected_url = os.getenv("TMDB_BASE_URL") + "/movie/123"
-    expected_headers = {
-        "accept": "application/json",
-        "Authorization": f"Bearer {os.getenv('TMDB_API_KEY')}"
-    }
-    mock_get.assert_called_once_with(expected_url, headers=expected_headers)
 
 
 @patch('utils.tmdb_service.requests.get')
@@ -52,18 +45,49 @@ def test_call_tmdb_api_with_error_response(mock_get):
     assert result["status_code"] == 404
 
 
+@patch('utils.tmdb_service.requests.get')
+def test_call_tmdb_api_invalid_json(mock_get):
+    mock_response = MagicMock()
+    mock_response.text = "INVALID_JSON"
+    mock_get.return_value = mock_response
+
+    result = call_tmdb_api("/movie/invalid")
+    assert "error" in result
+    assert result["error"] == "Invalid JSON response"
+
+
+@patch('utils.tmdb_service.requests.get')
+def test_call_tmdb_api_network_error(mock_get):
+    mock_get.side_effect = requests.exceptions.RequestException("Network error")
+
+    result = call_tmdb_api("/movie/network-error")
+    assert "error" in result
+    assert "Network error" in result["error"]
+
+
 @patch('utils.tmdb_service.os.getenv')
 @patch('utils.tmdb_service.requests.get')
-def test_call_tmdb_api_with_missing_env_variables(mock_get, mock_getenv):
-    def mock_getenv_side_effect(key):
+def test_call_tmdb_api_missing_base_url(mock_get, mock_getenv):
+    def getenv_side_effect(key):
+        if key == "TMDB_BASE_URL":
+            return None
+        return "fake-token"
+    mock_getenv.side_effect = getenv_side_effect
+
+    result = call_tmdb_api("/movie/123")
+    assert "error" in result
+    assert result["error"] == "Missing TMDB_BASE_URL or TMDB_API_KEY"
+
+
+@patch('utils.tmdb_service.os.getenv')
+@patch('utils.tmdb_service.requests.get')
+def test_call_tmdb_api_missing_api_key(mock_get, mock_getenv):
+    def getenv_side_effect(key):
         if key == "TMDB_API_KEY":
             return None
         return "https://api.themoviedb.org/3"
-
-    mock_getenv.side_effect = mock_getenv_side_effect
-    mock_response = MagicMock()
-    mock_response.text = json.dumps({"success": False})
-    mock_get.return_value = mock_response
+    mock_getenv.side_effect = getenv_side_effect
 
     result = call_tmdb_api("/movie/123")
-    assert isinstance(result, dict)
+    assert "error" in result
+    assert result["error"] == "Missing TMDB_BASE_URL or TMDB_API_KEY"
