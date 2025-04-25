@@ -4,11 +4,9 @@ from unittest.mock import patch, MagicMock
 from domain.models.movie import MovieDetail, PopularMovieList
 from repository.movie_repository import MovieRepository
 
-
-# Test de la méthode 'find_by_id' du repository des films
 class TestMovieRepository:
 
-    # Patch de la fonction 'call_tmdb_api' pour simuler la réponse de l'API TMDB
+    # simuler la réponse de l'API TMDB
     @patch('repository.movie_repository.call_tmdb_api')
     def test_find_by_id(self, mock_call_tmdb_api):
         # Simulation de la réponse de l'API pour un film spécifique
@@ -69,8 +67,6 @@ class TestMovieRepository:
             "total_pages": 1,
             "total_results": 1
         }
-
-        # Création de l'objet repository
         repository = MovieRepository()
 
         # Appel de la méthode search pour rechercher un film
