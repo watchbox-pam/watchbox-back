@@ -3,6 +3,7 @@ from typing import Optional, List
 
 import db_config
 from domain.models.playlist import Playlist
+from domain.models.movie import MediaItem
 
 
 class PlaylistRepository:
@@ -26,7 +27,7 @@ class PlaylistRepository:
 
         return success
 
-    def delete_playlist(self, playlist_id: int) -> bool:
+    def delete_playlist(self, playlist_id: str) -> bool:
         success: bool = False
 
         try:
@@ -41,7 +42,7 @@ class PlaylistRepository:
 
         return success
 
-    def update_playlist(self, playlist_id: int, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+    def update_playlist(self, playlist_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
         success: bool = False
 
         try:
@@ -69,7 +70,7 @@ class PlaylistRepository:
 
         return success
 
-    def get_playlist_by_id(self, playlist_id: int) -> Optional[Playlist]:
+    def get_playlist_by_id(self, playlist_id: str) -> Optional[Playlist]:
         playlist: Optional[Playlist] = None
 
         try:
@@ -92,7 +93,7 @@ class PlaylistRepository:
 
         return playlist
 
-    def get_playlists_by_user_id(self, user_id: int) -> List[Playlist]:
+    def get_playlists_by_user_id(self, user_id: str) -> List[Playlist]:
         playlists: List[Playlist] = []
 
         try:
@@ -130,3 +131,29 @@ class PlaylistRepository:
             print(e)
 
         return success
+
+    def get_media_in_playlist(self, playlist_id: str) -> list[MediaItem]:
+        media_data: list[MediaItem] = []
+
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = """
+                        SELECT m.id, m.poster_path
+                        FROM public.playlist_media pm
+                        JOIN public.movie m ON pm.movie_id = m.id
+                        WHERE pm.playlist_id = %s;
+                    """
+                    cur.execute(query, (playlist_id,))
+                    results = cur.fetchall()
+
+                    for result in results:
+                        media_data.append(MediaItem(
+                            id=result[0],
+                            image=result[1]
+                        ))
+
+        except Exception as e:
+            print(e)
+
+        return media_data

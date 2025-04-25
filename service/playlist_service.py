@@ -5,6 +5,7 @@ from typing import Optional, List
 from fastapi import HTTPException
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
+from domain.models.movie import MediaItem
 from domain.models.playlist import Playlist
 
 
@@ -28,7 +29,23 @@ class PlaylistService:
         return self.repository.create_playlist(new_playlist)
 
     def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
-        return self.repository.add_media_to_playlist(playlist_id, media_id)
+        try:
+            success = self.repository.add_media_to_playlist(playlist_id, media_id)
+            if not success:
+                raise HTTPException(status_code=400, detail="Impossible d'ajouter le média à la playlist.")
+            return success
+        except Exception as e:
+            # Lever une exception HTTP avec un message d'erreur
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
+
+    def get_media_in_playlist(self, playlist_id: str) -> List[MediaItem]:
+        try:
+            media_list = self.repository.get_media_in_playlist(playlist_id)
+            if not media_list:
+                raise HTTPException(status_code=404, detail="Aucun média trouvé dans cette playlist.")
+            return media_list
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
 
     def delete_playlist(self, playlist_id: str) -> bool:
         return self.repository.delete_playlist(playlist_id)

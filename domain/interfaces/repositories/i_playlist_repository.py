@@ -19,3 +19,6 @@ class IPlaylistRepository(Protocol):
 
     def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
         ...
+
+    def get_media_in_playlist(self, playlist_id: str) -> List[int]:
+        ...

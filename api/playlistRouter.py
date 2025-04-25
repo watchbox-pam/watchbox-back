@@ -3,6 +3,7 @@ from typing import List, Optional
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.models.playlist import Playlist
+from domain.models.movie import MediaItem
 from repository.playlist_repository import PlaylistRepository
 from service.playlist_service import PlaylistService
 
@@ -60,3 +61,13 @@ async def add_media_to_playlist(
     if not success:
         raise HTTPException(status_code=400, detail="Erreur lors de l'ajout du média à la playlist")
     return success
+
+@playlist_router.get("/{playlist_id}/media_list", response_model=List[MediaItem])
+async def get_media_in_playlist(
+    playlist_id: str,
+    service: IPlaylistService = Depends(get_playlist_service)
+):
+    media_list = service.get_media_in_playlist(playlist_id)
+    if not media_list:
+        raise HTTPException(status_code=404, detail="Aucun média trouvé dans cette playlist")
+    return media_list
