@@ -64,10 +64,3 @@ class MovieService(IMovieService):
     def find_by_time_window(self, time_window: str, page: int) -> Optional[Movie]:
             movie = self.repository.find_by_time_window(time_window, page)
             return movie
-
-    def find_by_ids_recommendation(self, ids: List[int]):
-        return self.repository.find_by_ids_recommendation(ids)
-
-
-    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
-        return self.repository.find_by_genres(genres)

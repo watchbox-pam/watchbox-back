@@ -17,8 +17,7 @@ recommendation_router = APIRouter(prefix="/recommendations", tags=["Recommendati
 def get_recommendation_service() -> IRecommendationService:
     repository: IRecommendationRepository = RecommendationRepository()
     playlist_service: IPlaylistService = get_playlist_service()
-    movie_service: IMovieService = get_movie_service()
-    return RecommendationService(repository, playlist_service, movie_service)
+    return RecommendationService(repository, playlist_service)
 
 def get_current_user(user_id: str = Depends(check_jwt_token)):
     return user_id

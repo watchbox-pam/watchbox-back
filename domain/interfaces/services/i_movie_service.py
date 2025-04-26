@@ -13,9 +13,3 @@ class IMovieService(Protocol):
 
     def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
         ...
-
-    def find_by_ids_recommendation(self, ids: List[int]):
-        ...
-
-    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
-        ...

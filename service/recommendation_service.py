@@ -1,20 +1,16 @@
 from typing import List
 
 from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
-from domain.interfaces.services.i_movie_service import IMovieService
 from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.interfaces.services.i_recommendation_service import IRecommendationService
 from domain.models.movieRecommendation import MovieRecommendation
-from domain.models.movie_list_item import MovieListItem
 from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
 
 
 class RecommendationService(IRecommendationService):
-    def __init__(self, repository: IRecommendationRepository, playlistService: IPlaylistService,
-                 movieService: IMovieService):
+    def __init__(self, repository: IRecommendationRepository, playlistService: IPlaylistService):
         self.repository = repository
         self.playlist_service = playlistService
-        self.movie_service = movieService
 
 
     def get_recommendations(self, emotion: Emotion, user_id: str):
@@ -27,12 +23,12 @@ class RecommendationService(IRecommendationService):
                 break
         user_watchlist = self.playlist_service.get_playlist_medias(user_watchlist_id)
 
-        media_ids = []
+        watchlist_media_ids = []
         for media in user_watchlist:
-            media_ids.append(media.movie_id)
+            watchlist_media_ids.append(media.movie_id)
 
         # Récupération des infos des médias de la watchlist
-        watchlist_media_infos: List[MovieRecommendation] = self.movie_service.find_by_ids_recommendation(media_ids)
+        watchlist_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(watchlist_media_ids)
 
         watchlist_movie_ids = []
         keywords = []
@@ -50,8 +46,8 @@ class RecommendationService(IRecommendationService):
                 elif credit["job_id"] == "537":
                     directors.append(credit["person_id"])
 
-        # Récupération des médias correpondants aux genres
-        genre_medias = self.movie_service.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
+        # Récupération des médias correspondants aux genres
+        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
 
         for media in genre_medias:
             media.weight = len(media.genres)
