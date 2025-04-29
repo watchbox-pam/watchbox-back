@@ -2,11 +2,12 @@ import datetime
 from typing import Optional, List
 
 import db_config
+from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.playlist import Playlist
 from domain.models.movie import MediaItem
 
 
-class PlaylistRepository:
+class PlaylistRepository(IPlaylistRepository):
     def create_playlist(self, playlist: Playlist) -> bool:
         success: bool = False
 

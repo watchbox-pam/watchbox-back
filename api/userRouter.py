@@ -1,21 +1,27 @@
 from fastapi import APIRouter, status
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
+from typing import cast
 import uuid
 
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.userLogin import UserLogin
 from domain.models.userSignup import UserSignup
+from repository.playlist_repository import PlaylistRepository
 from repository.user_repository import UserRepository
+from domain.interfaces.services.i_playlist_service import IPlaylistService
+from service.playlist_service import PlaylistService
 from service.user_service import UserService
 
 user_router = APIRouter(prefix="/users", tags=["Users"])
 
 
 def get_user_service() -> IUserService:
-    repository: IUserRepository = UserRepository()
-    return UserService(repository)
+    repository: IUserRepository = UserRepository()  # Implémentation concrète
+    playlist_repository = PlaylistRepository()  # Implémentation concrète de IPlaylistRepository
+    playlist_service: IPlaylistService = cast(IPlaylistService, PlaylistService(repository=playlist_repository))  # Utilisation de PlaylistService
+    return UserService(repository, playlist_service=playlist_service)
 
 
 @user_router.post("/signup")

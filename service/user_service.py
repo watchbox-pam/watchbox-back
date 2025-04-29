@@ -9,6 +9,7 @@ from api.auth.verify_auth_token import create_jwt_token
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.user import User
+from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.models.userLogin import UserLogin
 from domain.models.userSignup import UserSignup
 
@@ -16,8 +17,9 @@ load_dotenv()
 
 
 class UserService(IUserService):
-    def __init__(self, repository: IUserRepository):
+    def __init__(self, repository: IUserRepository, playlist_service: IPlaylistService):
         self.repository = repository
+        self.playlist_service = playlist_service
 
     def create_user(self, user: UserSignup) -> dict[str, str]:
 
@@ -39,11 +41,11 @@ class UserService(IUserService):
         hashed_password = sha256((user.password + pepper).encode('utf-8'))
         user.password = hashed_password.hexdigest()
         if self.repository.create_user(user):
+            self.playlist_service.create_playlist_on_register(user_id=user.id)
             user_token = create_jwt_token({"user_id": str(user_id)})
             return { "user_id": str(user_id), "token": user_token }
         else:
             raise Exception("La création de l'utilisateur a échoué")
-
 
     def get_user_by_id(self, id: str) -> Optional[User]:
         user = self.repository.get_user_by_id(id)

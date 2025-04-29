@@ -1,6 +1,7 @@
 import uuid
 
 from typing import Optional, List
+from datetime import datetime
 
 from fastapi import HTTPException
 
@@ -27,6 +28,29 @@ class PlaylistService:
             is_private=playlist.is_private
         )
         return self.repository.create_playlist(new_playlist)
+
+    def create_playlist_on_register(self, user_id: str) -> List[Playlist]:
+        playlists = [
+            Playlist(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title="Favoris",
+                created_at=datetime.utcnow(),
+                is_private=True
+            ),
+            Playlist(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title="Historique",
+                created_at=datetime.utcnow(),
+                is_private=True
+            )
+        ]
+
+        for playlist in playlists:
+            self.create_playlist(playlist)
+
+        return playlists
 
     def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
         try:

@@ -5,6 +5,9 @@ class IPlaylistService(Protocol):
     def create_playlist(self, playlist: Playlist) -> bool:
         ...
 
+    def create_playlist_on_register(self, user_id: str) -> List[Playlist]:
+        ...
+
     def delete_playlist(self, playlist_id: int) -> bool:
         ...
 
