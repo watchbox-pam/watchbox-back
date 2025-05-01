@@ -1,7 +1,11 @@
 from typing import Protocol, List
-from domain.models.movie_list_item import MovieListItem
-from domain.models.emotion import Emotion
+
+from domain.models.movieRecommendation import MovieRecommendation
+
 
 class IRecommendationRepository(Protocol):
-    def get_by_emotion(self, emotion: Emotion, limit: int = 10) -> List[MovieListItem]:
+    def find_by_ids_recommendation(self, ids: List[int]) -> List[MovieRecommendation]:
+        ...
+
+    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
         ...

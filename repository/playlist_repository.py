@@ -2,10 +2,12 @@ import datetime
 from typing import Optional, List
 
 import db_config
+from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.playlist import Playlist
+from domain.models.playlist_media import PlaylistMedia
 
 
-class PlaylistRepository:
+class PlaylistRepository(IPlaylistRepository):
     def create_playlist(self, playlist: Playlist) -> bool:
         success: bool = False
 
@@ -26,7 +28,7 @@ class PlaylistRepository:
 
         return success
 
-    def delete_playlist(self, playlist_id: int) -> bool:
+    def delete_playlist(self, playlist_id: str) -> bool:
         success: bool = False
 
         try:
@@ -41,7 +43,7 @@ class PlaylistRepository:
 
         return success
 
-    def update_playlist(self, playlist_id: int, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+    def update_playlist(self, playlist_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
         success: bool = False
 
         try:
@@ -69,7 +71,7 @@ class PlaylistRepository:
 
         return success
 
-    def get_playlist_by_id(self, playlist_id: int) -> Optional[Playlist]:
+    def get_playlist_by_id(self, playlist_id: str) -> Optional[Playlist]:
         playlist: Optional[Playlist] = None
 
         try:
@@ -92,7 +94,30 @@ class PlaylistRepository:
 
         return playlist
 
-    def get_playlists_by_user_id(self, user_id: int) -> List[Playlist]:
+    def get_playlist_medias(self, playlist_id: str) -> Optional[List[Playlist]]:
+        medias = []
+
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM public.playlist_media WHERE playlist_id=%s;", (playlist_id,))
+                    results = cur.fetchall()
+
+                    if results is not None:
+                        for result in results:
+                            medias.append(PlaylistMedia(
+                                playlist_id=result[0],
+                                movie_id=result[1],
+                                tv_id=result[2],
+                                add_date=result[3],
+                            ))
+
+        except Exception as e:
+            print(e)
+
+        return medias
+
+    def get_playlists_by_user_id(self, user_id: str) -> List[Playlist]:
         playlists: List[Playlist] = []
 
         try:
