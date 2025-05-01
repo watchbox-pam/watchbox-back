@@ -14,7 +14,7 @@ class RecommendationService(IRecommendationService):
 
 
     def get_recommendations(self, emotion: Emotion, user_id: str):
-        # Récupération de la watchlist de l'utilisateur
+        # Fetching user watchlist
         user_playlists = self.playlist_service.get_playlists_by_user_id(user_id)
         user_watchlist_id: str = ""
         for item in user_playlists:
@@ -27,7 +27,7 @@ class RecommendationService(IRecommendationService):
         for media in user_watchlist:
             watchlist_media_ids.append(media.movie_id)
 
-        # Récupération des infos des médias de la watchlist
+        # Fetching infos of watchlist medias
         watchlist_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(watchlist_media_ids)
 
         watchlist_movie_ids = []
@@ -35,7 +35,7 @@ class RecommendationService(IRecommendationService):
         actors = []
         directors = []
 
-        # Ajout des données des médias de la watchlist
+        # Adding data from the watchlist medias
         for watchlist_media in watchlist_media_infos:
             watchlist_movie_ids.append(watchlist_media.id)
             for keyword in watchlist_media.keywords:
@@ -46,27 +46,27 @@ class RecommendationService(IRecommendationService):
                 elif credit["job_id"] == "537":
                     directors.append(credit["person_id"])
 
-        # Récupération des médias correspondants aux genres
+        # Getting medias matching selected emotion / genres
         genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
 
         for media in genre_medias:
             media.weight = len(media.genres)
             if len(user_watchlist) > 0:
-                # Vérifier si le média est dans la watchlist
+                # Check if media is in the user watchlist
                 if media.id in watchlist_movie_ids:
                     media.weight += 10
-                # Ajout de poids par rapport aux mots clés de la watchlist
+                # Add weight based on the watchlist keywords
                 for keyword in media.keywords:
                     media.weight += keywords.count(keyword)
                 for credit in media.credits:
-                    # Ajout de poids par rapport aux acteurs de la watchlist
+                    # Add weight based on the watchlist actors
                     if credit["job_id"] == "96":
                         media.weight += actors.count(credit["person_id"])
-                    # Ajout de poids par rapport aux réalisateurs de la watchlist (plus important)
+                    # Add weight based on the watchlist directors (more important)
                     elif credit["job_id"] == "537":
                         media.weight += directors.count(credit["person_id"]) * 2
 
-        # Classement des médias par popularité et poids descendant
+        # Sorting media by descending popularity and weight
         genre_medias = sorted(genre_medias, key=lambda x: x.popularity, reverse=True)
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
 
