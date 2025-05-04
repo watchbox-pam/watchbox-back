@@ -1,9 +1,8 @@
 from datetime import date
 from dataclasses import dataclass
 
-class Genre:
-    id: int
-    name: str
+from domain.models.genre import Genre
+
 
 @dataclass(frozen=True)
 class MovieDetail:

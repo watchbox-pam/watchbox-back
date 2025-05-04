@@ -1,5 +1,7 @@
 from typing import Optional, List, Protocol
 from domain.models.playlist import Playlist
+from domain.models.playlist_media import PlaylistMedia
+
 
 class IPlaylistService(Protocol):
     def create_playlist(self, playlist: Playlist) -> bool:
@@ -8,10 +10,12 @@ class IPlaylistService(Protocol):
     def create_playlist_on_register(self, user_id: str) -> List[Playlist]:
         ...
 
-    def delete_playlist(self, playlist_id: int) -> bool:
+    def delete_playlist(self, playlist_id: str) -> bool:
         ...
 
-    def update_playlist(self, playlist_id: int, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+    def update_playlist(self, playlist_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+        ...
+
         ...
 
     def get_playlist_by_id(self, playlist_id: int) -> Optional[Playlist]:

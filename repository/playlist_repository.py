@@ -5,6 +5,7 @@ import db_config
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.playlist import Playlist
 from domain.models.movie import MediaItem
+from domain.models.playlist_media import PlaylistMedia
 
 
 class PlaylistRepository(IPlaylistRepository):
@@ -93,6 +94,29 @@ class PlaylistRepository(IPlaylistRepository):
             print(e)
 
         return playlist
+
+    def get_playlist_medias(self, playlist_id: str) -> Optional[List[Playlist]]:
+        medias = []
+
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM public.playlist_media WHERE playlist_id=%s;", (playlist_id,))
+                    results = cur.fetchall()
+
+                    if results is not None:
+                        for result in results:
+                            medias.append(PlaylistMedia(
+                                playlist_id=result[0],
+                                movie_id=result[1],
+                                tv_id=result[2],
+                                add_date=result[3],
+                            ))
+
+        except Exception as e:
+            print(e)
+
+        return medias
 
     def get_playlists_by_user_id(self, user_id: str) -> List[Playlist]:
         playlists: List[Playlist] = []

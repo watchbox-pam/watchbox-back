@@ -5,3 +5,6 @@ from domain.models.emotion import Emotion
 class IRecommendationService(Protocol):
     def get_by_emotion(self, emotion: Emotion, limit: int = 10) -> List[MovieListItem]:
         ...
+
+    def get_recommendations(self, emotion: Emotion, user_id: str):
+        ...

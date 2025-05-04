@@ -22,7 +22,7 @@ def create_jwt_token(payload: dict) -> str:
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-def check_jwt_token(token: str = Depends(oauth2_scheme)) -> bool:
+def check_jwt_token(token: str = Depends(oauth2_scheme)) -> str:
     try:
         decoded_token = token.strip('\"')
         payload = jwt.decode(decoded_token, jwt_secret_key, algorithms=[jwt_algorithm])
@@ -30,7 +30,7 @@ def check_jwt_token(token: str = Depends(oauth2_scheme)) -> bool:
         user_exists = get_user_by_id(payload["user_id"])
         if user_exists is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalide")
-        return True
+        return user_exists.id
     except:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalide")
 

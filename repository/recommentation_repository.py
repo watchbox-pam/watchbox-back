@@ -1,30 +1,91 @@
 from typing import List
-import random
+
+import db_config
 from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
-from domain.models.movie_list_item import MovieListItem
-from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
-from utils.tmdb_service import call_tmdb_api
+from domain.models.movieRecommendation import MovieRecommendation
 
 
 class RecommendationRepository(IRecommendationRepository):
-    def get_by_emotion(self, emotion: Emotion, limit: int = 10) -> List[MovieListItem]:
-        genre_ids = EMOTION_GENRE_MAPPING[emotion]
+    def find_by_ids_recommendation(self, ids: List[int]):
+        medias = []
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = ("SELECT "
+                             "DISTINCT(m.id), "
+                             "array_agg(DISTINCT mg.genre_id) AS genre_ids, "
+                             "array_agg(DISTINCT mk.keyword_id) AS keyword_ids, "
+                             "array_agg(DISTINCT (c.person_id, c.job_id)) AS credit_ids "
+                             "FROM public.movie m "
+                             "INNER JOIN public.movie_movie_genre mg ON mg.movie_id = m.id "
+                             "INNER JOIN public.media_keyword mk ON mk.movie_id = m.id "
+                             "INNER JOIN public.credit c ON c.movie_id = m.id "
+                             "WHERE m.id = ANY(%s) "
+                             "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537))"
+                             "GROUP BY m.id;")
 
-        # Choose a random genre from those associated with the emotion
-        genre_id = random.choice(genre_ids)
+                    cur.execute(query, (ids,))
+                    results = cur.fetchall()
 
-        # Get movies by genre
-        endpoint = f"/discover/movie?with_genres={genre_id}&language=fr-FR&sort_by=popularity.desc"
-        result = call_tmdb_api(endpoint)
+                    if results is not None:
+                        for result in results:
+                            credits = []
+                            for credit in result[3]:
+                                credits.append({"person_id": credit[0], "job_id": credit[1]})
+                            medias.append(MovieRecommendation(
+                                id=result[0],
+                                genres=result[1],
+                                keywords=result[2],
+                                credits=credits,
+                                poster_path="",
+                                popularity=0,
+                                title="",
+                                weight=0
+                            ))
 
-        movies = []
-        if "results" in result:
-            for movie_data in result["results"][:limit]:
-                movie = MovieListItem(
-                    id=movie_data["id"],
-                    title=movie_data.get("title", ""),
-                    poster_path=movie_data.get("poster_path", "")
-                )
-                movies.append(movie)
+        except Exception as e:
+            print(e)
 
-        return movies
+        return medias
+
+    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
+        medias: List[MovieRecommendation] = []
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = ("SELECT "
+                             "mg.movie_id as id, MAX(m.popularity) as popularity, m.title as title, MAX(m.poster_path) as poster_path, "
+                             "array_agg(DISTINCT mg.genre_id) AS genre_ids, "
+                             "array_agg(DISTINCT mk.keyword_id) AS keyword_ids, "
+                             "array_agg(DISTINCT (c.person_id, c.job_id)) AS credit_ids "
+                             "FROM public.movie_movie_genre mg "
+                             "INNER JOIN public.movie m on m.id = mg.movie_id "
+                             "INNER JOIN public.media_keyword mk ON mk.movie_id = m.id "
+                             "INNER JOIN public.credit c ON c.movie_id = m.id "
+                             "WHERE mg.genre_id = ANY(%s) "
+                             "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537))"
+                             "group by mg.movie_id, m.title;")
+
+                    cur.execute(query, (genres,))
+                    results = cur.fetchall()
+
+                    if results is not None:
+                        for result in results:
+                            credits = []
+                            for credit in result[6]:
+                                credits.append({"person_id": credit[0], "job_id": credit[1]})
+                            medias.append(MovieRecommendation(
+                                id=result[0],
+                                popularity=result[1],
+                                title=result[2],
+                                poster_path=result[3],
+                                genres=result[4],
+                                keywords=result[5],
+                                credits=credits,
+                                weight=0
+                            ))
+
+        except Exception as e:
+            print(e)
+
+        return medias

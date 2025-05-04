@@ -7,10 +7,12 @@ from fastapi import HTTPException
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.movie import MediaItem
+from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.models.playlist import Playlist
+from domain.models.playlist_media import PlaylistMedia
 
 
-class PlaylistService:
+class PlaylistService(IPlaylistService):
     def __init__(self, repository: IPlaylistRepository):
         self.repository = repository
 
@@ -79,6 +81,9 @@ class PlaylistService:
 
     def get_playlist_by_id(self, playlist_id: str) -> Optional[Playlist]:
         return self.repository.get_playlist_by_id(playlist_id)
+
+    def get_playlist_medias(self, playlist_id: str) -> Optional[List[PlaylistMedia]]:
+        return self.repository.get_playlist_medias(playlist_id)
 
     def get_playlists_by_user_id(self, user_id: str) -> List[Playlist]:
         return self.repository.get_playlists_by_user_id(user_id)
