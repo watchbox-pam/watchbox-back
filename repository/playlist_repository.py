@@ -105,11 +105,11 @@ class PlaylistRepository(IPlaylistRepository):
 
                     for result in results:
                         playlists.append(Playlist(
-                            id=result[0],
-                            user_id=result[1],
+                            id=str(result[0]),
+                            user_id=str(result[1]),
                             title=result[2],
-                            created_at=result[3],
-                            is_private=result[4],
+                            is_private=result[3],
+                            created_at=result[4],
                         ))
 
         except Exception as e:
