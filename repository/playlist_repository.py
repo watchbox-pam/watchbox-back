@@ -45,7 +45,14 @@ class PlaylistRepository(IPlaylistRepository):
                 title="Historique",
                 created_at=datetime.datetime.utcnow(),
                 is_private=True
-            )
+            ),
+            Playlist(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title="Watchlist",
+                created_at=datetime.datetime.utcnow(),
+                is_private=True
+            ),
         ]
 
         for playlist in playlists:

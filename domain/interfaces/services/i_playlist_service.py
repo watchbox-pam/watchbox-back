@@ -1,13 +1,11 @@
 from typing import Optional, List, Protocol
+
+from domain.models.movie import MediaItem
 from domain.models.playlist import Playlist
-from domain.models.playlist_media import PlaylistMedia
 
 
 class IPlaylistService(Protocol):
     def create_playlist(self, playlist: Playlist) -> bool:
-        ...
-
-    def create_playlist_on_register(self, user_id: str) -> List[Playlist]:
         ...
 
     def delete_playlist(self, playlist_id: str) -> bool:
@@ -25,7 +23,7 @@ class IPlaylistService(Protocol):
     def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
         ...
 
-    def get_media_in_playlist(self, playlist_id: str) -> List[int]:
+    def get_media_in_playlist(self, playlist_id: str) -> List[MediaItem]:
         ...
 
     def remove_media_from_playlist(self, playlist_id: str, media_id: int) -> bool:

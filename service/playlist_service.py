@@ -36,29 +36,6 @@ class PlaylistService(IPlaylistService):
         )
         return self.repository.create_playlist(new_playlist)
 
-    def create_playlist_on_register(self, user_id: str) -> List[Playlist]:
-        playlists = [
-            Playlist(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="Favoris",
-                created_at=datetime.utcnow(),
-                is_private=True
-            ),
-            Playlist(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="Historique",
-                created_at=datetime.utcnow(),
-                is_private=True
-            )
-        ]
-
-        for playlist in playlists:
-            self.create_playlist(playlist)
-
-        return playlists
-
     def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
         try:
             success = self.repository.add_media_to_playlist(playlist_id, media_id)
