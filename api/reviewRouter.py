@@ -1,9 +1,12 @@
 from fastapi import APIRouter, status
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
+
+from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.repositories.i_review_repository import IReviewRepository
 from domain.interfaces.services.i_review_service import IReviewService
 from domain.models.review import Review
+from repository.playlist_repository import PlaylistRepository
 from repository.review_repository import ReviewRepository
 from service.review_service import ReviewService
 
@@ -12,7 +15,8 @@ review_router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
 def get_review_service() -> IReviewService:
     repository: IReviewRepository = ReviewRepository()
-    return ReviewService(repository)
+    playlist_repository: IPlaylistRepository = PlaylistRepository()
+    return ReviewService(repository, playlist_repository)
 
 
 @review_router.post("/")
