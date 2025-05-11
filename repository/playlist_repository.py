@@ -1,5 +1,6 @@
 import datetime
 from typing import Optional, List
+import uuid
 
 import db_config
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
@@ -28,6 +29,29 @@ class PlaylistRepository(IPlaylistRepository):
             print(e)
 
         return success
+
+    def create_playlist_on_register(self, user_id: str) -> List[Playlist]:
+        playlists = [
+            Playlist(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title="Favoris",
+                created_at=datetime.datetime.utcnow(),
+                is_private=True
+            ),
+            Playlist(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title="Historique",
+                created_at=datetime.datetime.utcnow(),
+                is_private=True
+            )
+        ]
+
+        for playlist in playlists:
+            self.create_playlist(playlist)
+
+        return playlists
 
     def delete_playlist(self, playlist_id: str) -> bool:
         success: bool = False
@@ -83,11 +107,11 @@ class PlaylistRepository(IPlaylistRepository):
 
                     if result is not None:
                         playlist = Playlist(
-                            id=result[0],
-                            user_id=result[1],
+                            id=str(result[0]),
+                            user_id=str(result[1]),
                             title=result[2],
-                            created_at=result[3],
-                            is_private=result[4],
+                            is_private=result[3],
+                            created_at=result[4],
                         )
 
         except Exception as e:
@@ -147,6 +171,7 @@ class PlaylistRepository(IPlaylistRepository):
         try:
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
+
                     query = "INSERT INTO public.playlist_media (playlist_id, movie_id, add_date) VALUES (%s, %s, %s);"
                     add_date = datetime.datetime.now()
                     cur.execute(query, (playlist_id, media_id, add_date))
@@ -182,3 +207,18 @@ class PlaylistRepository(IPlaylistRepository):
             print(e)
 
         return media_data
+
+    def remove_media_from_playlist(self, playlist_id: str, media_id: int) -> bool:
+        success: bool = False
+
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = "DELETE FROM public.playlist_media WHERE playlist_id=%s AND movie_id=%s;"
+                    cur.execute(query, (playlist_id, media_id))
+                    success = cur.rowcount > 0
+
+        except Exception as e:
+            print(e)
+
+        return success

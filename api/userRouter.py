@@ -20,8 +20,7 @@ user_router = APIRouter(prefix="/users", tags=["Users"])
 def get_user_service() -> IUserService:
     repository: IUserRepository = UserRepository()  # Implémentation concrète
     playlist_repository = PlaylistRepository()  # Implémentation concrète de IPlaylistRepository
-    playlist_service: IPlaylistService = cast(IPlaylistService, PlaylistService(repository=playlist_repository))  # Utilisation de PlaylistService
-    return UserService(repository, playlist_service=playlist_service)
+    return UserService(repository, playlist_repository)
 
 
 @user_router.post("/signup")
