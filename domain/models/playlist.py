@@ -6,5 +6,5 @@ class Playlist:
     id: str
     user_id: str
     title: str
-    created_at: datetime = datetime
     is_private: bool = field(default=True)
+    created_at: datetime = datetime
