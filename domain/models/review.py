@@ -5,6 +5,11 @@ from pydantic import UUID4
 
 
 @dataclass(frozen=True)
+class UserInfo:
+    username: str
+    picture: str
+
+@dataclass(frozen=True)
 class Review:
     id: str
     rating: int | None
@@ -15,3 +20,4 @@ class Review:
     tv_episode_id: int | None
     user_id: UUID4
     created_at: datetime
+    user: UserInfo | None
