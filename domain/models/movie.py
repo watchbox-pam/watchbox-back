@@ -64,3 +64,8 @@ class PopularMovieList:
     results: list[PopularMovieListItem]
     total_pages: int
     total_results: int
+
+@dataclass
+class MediaItem:
+    id: int
+    image: str
