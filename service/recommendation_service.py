@@ -1,27 +1,27 @@
 from typing import List
 
+from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
-from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.interfaces.services.i_recommendation_service import IRecommendationService
 from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
 
 
 class RecommendationService(IRecommendationService):
-    def __init__(self, repository: IRecommendationRepository, playlistService: IPlaylistService):
+    def __init__(self, repository: IRecommendationRepository, playlist_repository: IPlaylistRepository):
         self.repository = repository
-        self.playlist_service = playlistService
+        self.playlist_repository = playlist_repository
 
 
     def get_recommendations(self, emotion: Emotion, user_id: str):
         # Fetching user watchlist
-        user_playlists = self.playlist_service.get_playlists_by_user_id(user_id)
+        user_playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
         user_watchlist_id: str = ""
         for item in user_playlists:
             if item.title == 'Watchlist':
                 user_watchlist_id = str(item.id)
                 break
-        user_watchlist = self.playlist_service.get_playlist_medias(user_watchlist_id)
+        user_watchlist = self.playlist_repository.get_playlist_medias(user_watchlist_id)
 
         watchlist_media_ids = []
         for media in user_watchlist:
