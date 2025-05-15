@@ -81,25 +81,32 @@ class PlaylistRepository(IPlaylistRepository):
         try:
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
-                    updates = []
-                    values = []
+                    # Récupérer les valeurs actuelles
+                    cur.execute("SELECT title, is_private FROM public.playlist WHERE id=%s;", (playlist_id,))
+                    result = cur.fetchone()
 
-                    if title is not None:
-                        updates.append("title=%s")
-                        values.append(title)
+                    if result is None:
+                        print(f"Playlist avec ID {playlist_id} introuvable.")
+                        return False
 
-                    if is_private is not None:
-                        updates.append("is_private=%s")
-                        values.append(is_private)
+                    current_title, current_is_private = result
 
-                    if updates:
-                        query = f"UPDATE public.playlist SET {', '.join(updates)} WHERE id=%s;"
-                        values.append(playlist_id)
-                        cur.execute(query, tuple(values))
-                        success = cur.rowcount > 0
+                    # Utiliser les valeurs actuelles si aucun nouveau paramètre n'est fourni
+                    title = title if title is not None else current_title
+                    is_private = is_private if is_private is not None else current_is_private
+
+                    print(f"Valeurs mises à jour : title={title}, is_private={is_private}")
+
+                    # Construire et exécuter la requête de mise à jour
+                    query = "UPDATE public.playlist SET title=%s, is_private=%s WHERE id=%s;"
+                    cur.execute(query, (title, is_private, playlist_id))
+                    success = cur.rowcount > 0
+
+                    if not success:
+                        print(f"Aucune ligne mise à jour pour la playlist ID {playlist_id}.")
 
         except Exception as e:
-            print(e)
+            print(f"Erreur lors de la mise à jour de la playlist : {e}")
 
         return success
 

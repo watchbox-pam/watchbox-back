@@ -58,8 +58,26 @@ class PlaylistService(IPlaylistService):
     def delete_playlist(self, playlist_id: str) -> bool:
         return self.repository.delete_playlist(playlist_id)
 
-    def update_playlist(self, playlist_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
-        return self.repository.update_playlist(playlist_id, title, is_private)
+    def update_playlist(self, playlist_id: str,user_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+        try:
+            if title:
+                current = self.repository.get_playlist_by_id(playlist_id)
+                if not current:
+                    raise HTTPException(status_code=404, detail="Playlist introuvable.")
+                if title != current.title:
+                    existing_playlists = self.repository.get_playlists_by_user_id(user_id)
+                    if any(p.title.lower() == title.lower() for p in existing_playlists):
+                        raise HTTPException(status_code=400, detail="Playlist déjà existante pour cet utilisateur.")
+            success = self.repository.update_playlist(playlist_id, title, is_private)
+            if not success:
+                raise HTTPException(status_code=404, detail="Playlist introuvable ou aucune mise à jour effectuée.")
+            return success
+        except HTTPException as http_exc:
+                logger.error(f"Erreur HTTP : {http_exc.detail}")
+                raise
+        except Exception as e:
+            logger.exception(f"Erreur inattendue lors de la mise à jour de la playlist {playlist_id}")
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
 
     def get_playlist_by_id(self, playlist_id: str) -> Optional[Playlist]:
         return self.repository.get_playlist_by_id(playlist_id)
