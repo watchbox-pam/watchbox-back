@@ -39,7 +39,6 @@ async def update_playlist(
     playlist_update: PlaylistUpdateRequest,
     service: IPlaylistService = Depends(get_playlist_service)
 ):
-    logger.info(f"Données reçues : playlist_id={playlist_id}, user_id={playlist_update.user_id} title={playlist_update.title}, is_private={playlist_update.is_private}")
 
     success = service.update_playlist(
         playlist_id,

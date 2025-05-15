@@ -95,8 +95,6 @@ class PlaylistRepository(IPlaylistRepository):
                     title = title if title is not None else current_title
                     is_private = is_private if is_private is not None else current_is_private
 
-                    print(f"Valeurs mises à jour : title={title}, is_private={is_private}")
-
                     # Construire et exécuter la requête de mise à jour
                     query = "UPDATE public.playlist SET title=%s, is_private=%s WHERE id=%s;"
                     cur.execute(query, (title, is_private, playlist_id))
