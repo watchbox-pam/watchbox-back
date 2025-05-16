@@ -66,6 +66,10 @@ class PlaylistRepository(IPlaylistRepository):
         try:
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
+                    delete_media_query = "DELETE FROM public.playlist_media WHERE playlist_id=%s;"
+                    cur.execute(delete_media_query, (playlist_id,))
+
+                with conn.cursor() as cur:
                     query = "DELETE FROM public.playlist WHERE id=%s;"
                     cur.execute(query, (playlist_id,))
                     success = cur.rowcount > 0
@@ -193,6 +197,21 @@ class PlaylistRepository(IPlaylistRepository):
             print(e)
 
         return success
+
+    def media_exists_in_playlist(self, playlist_id: str, media_id: int) -> bool:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = """
+                            SELECT 1
+                            FROM public.playlist_media
+                            WHERE playlist_id = %s \
+                              AND movie_id = %s; \
+                            """
+                    cur.execute(query, (playlist_id, media_id))
+                    return cur.fetchone() is not None
+        except Exception as e:
+            return False
 
     def get_media_in_playlist(self, playlist_id: str) -> list[MediaItem]:
         media_data: list[MediaItem] = []

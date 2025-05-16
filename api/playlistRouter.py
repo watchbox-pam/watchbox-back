@@ -7,7 +7,6 @@ from domain.models.movie import MediaItem
 from repository.playlist_repository import PlaylistRepository
 from service.playlist_service import PlaylistService
 from domain.models.playlist import PlaylistUpdateRequest
-from fastapi import Body
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -26,11 +25,11 @@ async def create_playlist(playlist: Playlist, service: IPlaylistService = Depend
         raise HTTPException(status_code=400, detail="Erreur lors de la création de la playlist")
     return success
 
-@playlist_router.delete("/{playlist_id}", response_model=bool)
-async def delete_playlist(playlist_id: int, service: IPlaylistService = Depends(get_playlist_service)):
+@playlist_router.delete("/{playlist_id}")
+async def delete_playlist(playlist_id: str, service: IPlaylistService = Depends(get_playlist_service)):
     success = service.delete_playlist(playlist_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Playlist non trouvée")
+        raise HTTPException(status_code=404, detail="Playlist non trouvée ou erreur lors de la suppression")
     return success
 
 @playlist_router.put("/{playlist_id}", response_model=bool)
