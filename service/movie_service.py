@@ -3,7 +3,7 @@ from typing import Optional, List
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
 from domain.models.emotion import Emotion
-from domain.models.movie import Movie, MovieDetail
+from domain.models.movie import Movie, MovieDetail, PopularMovieList
 from domain.interfaces.repositories.i_release_dates_repository import IReleaseDatesRepository
 from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
 from domain.interfaces.repositories.i_videos_repository import IVideosRepository
@@ -62,5 +62,9 @@ class MovieService(IMovieService):
         return self.repository.search(search_term)
 
     def find_by_time_window(self, time_window: str, page: int) -> Optional[Movie]:
-            movie = self.repository.find_by_time_window(time_window, page)
-            return movie
+        movie = self.repository.find_by_time_window(time_window, page)
+        return movie
+
+    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
+        movies = self.repository.find_by_genre(genre)
+        return movies
