@@ -28,7 +28,7 @@ class MovieService(IMovieService):
 
         france_providers = watch_providers.results.get("FR", {}).get("flatrate", [])
 
-        video = next((v for v in videos.results if v.get("site") == "YouTube"), None)
+        video = next((v for v in videos.results if v.get("site") == "YouTube" and v.get("type") == "Trailer"), None)
 
         casting = credits.cast if credits else None
         crew = credits.crew if credits else None

@@ -7,7 +7,7 @@ from utils.tmdb_service import call_tmdb_api
 
 class VideosRepository(IVideosRepository):
     def find_by_id(self, movie_id: int) -> Optional[Videos]:
-        endpoint = f"/movie/{movie_id}/videos"
+        endpoint = f"/movie/{movie_id}/videos?language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
