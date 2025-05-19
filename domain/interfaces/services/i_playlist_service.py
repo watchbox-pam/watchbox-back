@@ -11,7 +11,7 @@ class IPlaylistService(Protocol):
     def delete_playlist(self, playlist_id: str) -> bool:
         ...
 
-    def update_playlist(self, playlist_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+    def update_playlist(self, playlist_id: str,user_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
         ...
 
     def get_playlist_by_id(self, playlist_id: str) -> Optional[Playlist]:
