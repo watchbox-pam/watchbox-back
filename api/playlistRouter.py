@@ -6,6 +6,11 @@ from domain.models.playlist import Playlist
 from domain.models.movie import MediaItem
 from repository.playlist_repository import PlaylistRepository
 from service.playlist_service import PlaylistService
+from domain.models.playlist import PlaylistUpdateRequest
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 playlist_router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
@@ -20,21 +25,27 @@ async def create_playlist(playlist: Playlist, service: IPlaylistService = Depend
         raise HTTPException(status_code=400, detail="Erreur lors de la création de la playlist")
     return success
 
-@playlist_router.delete("/{playlist_id}", response_model=bool)
-async def delete_playlist(playlist_id: int, service: IPlaylistService = Depends(get_playlist_service)):
+@playlist_router.delete("/{playlist_id}")
+async def delete_playlist(playlist_id: str, service: IPlaylistService = Depends(get_playlist_service)):
     success = service.delete_playlist(playlist_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Playlist non trouvée")
+        raise HTTPException(status_code=404, detail="Playlist non trouvée ou erreur lors de la suppression")
     return success
 
 @playlist_router.put("/{playlist_id}", response_model=bool)
 async def update_playlist(
-    playlist_id: int,
-    title: Optional[str] = None,
-    is_private: Optional[bool] = None,
+    playlist_id: str,
+    playlist_update: PlaylistUpdateRequest,
     service: IPlaylistService = Depends(get_playlist_service)
 ):
-    success = service.update_playlist(playlist_id, title, is_private)
+
+    success = service.update_playlist(
+        playlist_id,
+        user_id=playlist_update.user_id,
+        title=playlist_update.title,
+        is_private=playlist_update.is_private
+    )
+
     if not success:
         raise HTTPException(status_code=404, detail="Playlist non trouvée ou mise à jour échouée")
     return success

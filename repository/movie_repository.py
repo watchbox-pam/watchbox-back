@@ -75,3 +75,17 @@ class MovieRepository(IMovieRepository):
         )
 
         return movies
+
+    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
+        endpoint = f"/discover/movie?with_genres={genre}&include_adult=false&include_video=false&language=fr-FR&page=1&sort_by=popularity.desc"
+
+        result = call_tmdb_api(endpoint)
+
+        movies = PopularMovieList(
+            page=result["page"],
+            results=result["results"],
+            total_results=result["total_pages"],
+            total_pages=result["total_results"]
+        )
+
+        return movies
