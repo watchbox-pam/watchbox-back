@@ -1,7 +1,6 @@
-from typing import Protocol, Optional, List
+from typing import Protocol, Optional
 
 from domain.models.movie import Movie, PopularMovieList, MovieDetail
-from domain.models.movieRecommendation import MovieRecommendation
 
 
 class IMovieService(Protocol):

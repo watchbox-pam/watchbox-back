@@ -14,23 +14,49 @@ class RecommendationService(IRecommendationService):
 
 
     def get_recommendations(self, emotion: Emotion, user_id: str):
-        # Fetching user watchlist
+        # Fetching user main playlists : Watchlist, History and Favorites
         user_playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
         user_watchlist_id: str = ""
+        user_history_id: str = ""
+        user_favorites_id: str = ""
+        playlist_ids_fetched: int = 0
         for item in user_playlists:
-            if item.title == 'Watchlist':
-                user_watchlist_id = str(item.id)
+            if playlist_ids_fetched == 3:
                 break
+            if item.title == "Watchlist":
+                user_watchlist_id = str(item.id)
+                playlist_ids_fetched += 1
+            if item.title == "Historique":
+                user_history_id = str(item.id)
+                playlist_ids_fetched += 1
+            if item.title == "Favoris":
+                user_favorites_id = str(item.id)
+                playlist_ids_fetched += 1
+
         user_watchlist = self.playlist_repository.get_playlist_medias(user_watchlist_id)
+        user_history = self.playlist_repository.get_playlist_medias(user_history_id)
+        user_favorites = self.playlist_repository.get_playlist_medias(user_favorites_id)
 
         watchlist_media_ids = []
         for media in user_watchlist:
             watchlist_media_ids.append(media.movie_id)
 
-        # Fetching infos of watchlist medias
+        history_media_ids = []
+        for media in user_history:
+            history_media_ids.append(media.movie_id)
+
+        favorites_media_ids = []
+        for media in user_favorites:
+            favorites_media_ids.append(media.movie_id)
+
+        # Fetching infos of playlists
         watchlist_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(watchlist_media_ids)
+        history_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(history_media_ids)
+        favorites_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(favorites_media_ids)
 
         watchlist_movie_ids = []
+        history_movie_ids = []
+        favorites_movie_ids = []
         keywords = []
         actors = []
         directors = []
