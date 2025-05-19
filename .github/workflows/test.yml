@@ -28,8 +28,8 @@ jobs:
           pip install -e .
       - name: Run tests
         env:
-          TMDB_BASE_URL: ${{ env.TMDB_BASE_URL }}
-          TMDB_API_KEY: ${{ env.TMDB_API_KEY }}
+          TMDB_BASE_URL: ${{ secrets.TMDB_BASE_URL }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           python -m coverage run -m pytest -v -s
       - name: Generate Coverage Report
