@@ -113,4 +113,4 @@ class TestMovieRepository:
         assert result.total_results == 5
 
         # Vérification que la méthode de l'API a bien été appelée avec le bon endpoint
-        mock_call_tmdb_api.assert_called_once_with("/trending/movie/week?page=1")
+        mock_call_tmdb_api.assert_called_once_with("/trending/movie/week?page=1&language=fr-FR")
