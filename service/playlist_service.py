@@ -38,12 +38,16 @@ class PlaylistService(IPlaylistService):
 
     def add_media_to_playlist(self, playlist_id: str, media_id: int) -> bool:
         try:
+
+            if self.repository.media_exists_in_playlist(playlist_id, media_id):
+                raise HTTPException(status_code=400, detail="Le média est déjà présent dans la playlist.")
+
             success = self.repository.add_media_to_playlist(playlist_id, media_id)
             if not success:
                 raise HTTPException(status_code=400, detail="Impossible d'ajouter le média à la playlist.")
             return success
         except Exception as e:
-            # Lever une exception HTTP avec un message d'erreur
+
             raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
 
     def get_media_in_playlist(self, playlist_id: str) -> List[MediaItem]:
@@ -56,10 +60,32 @@ class PlaylistService(IPlaylistService):
             raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
 
     def delete_playlist(self, playlist_id: str) -> bool:
-        return self.repository.delete_playlist(playlist_id)
+        existing_playlist = self.repository.get_playlist_by_id(playlist_id)
+        if not existing_playlist:
+            raise HTTPException(status_code=404, detail="Playlist introuvable.")
+        success = self.repository.delete_playlist(playlist_id)
+        if not success:
+            raise HTTPException(status_code=400, detail="Erreur lors de la suppression de la playlist.")
+        return success
 
-    def update_playlist(self, playlist_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
-        return self.repository.update_playlist(playlist_id, title, is_private)
+    def update_playlist(self, playlist_id: str,user_id: str, title: Optional[str] = None, is_private: Optional[bool] = None) -> bool:
+        try:
+            if title:
+                current = self.repository.get_playlist_by_id(playlist_id)
+                if not current:
+                    raise HTTPException(status_code=404, detail="Playlist introuvable.")
+                if title != current.title:
+                    existing_playlists = self.repository.get_playlists_by_user_id(user_id)
+                    if any(p.title.lower() == title.lower() for p in existing_playlists):
+                        raise HTTPException(status_code=400, detail="Playlist déjà existante pour cet utilisateur.")
+            success = self.repository.update_playlist(playlist_id, title, is_private)
+            if not success:
+                raise HTTPException(status_code=404, detail="Playlist introuvable ou aucune mise à jour effectuée.")
+            return success
+        except HTTPException as http_exc:
+                raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
 
     def get_playlist_by_id(self, playlist_id: str) -> Optional[Playlist]:
         return self.repository.get_playlist_by_id(playlist_id)
@@ -71,18 +97,12 @@ class PlaylistService(IPlaylistService):
         return self.repository.get_playlists_by_user_id(user_id)
 
     def remove_media_from_playlist(self, playlist_id: str, media_id: int) -> bool:
-        logger.info(f"Tentative de suppression du média {media_id} de la playlist {playlist_id}")
         try:
             success = self.repository.remove_media_from_playlist(playlist_id, media_id)
             if not success:
-                logger.warning(f"Échec de la suppression du média {media_id} de la playlist {playlist_id}")
                 raise HTTPException(status_code=400, detail="Impossible de retirer le média de la playlist.")
-                logger.info(f"Média {media_id} supprimé avec succès de la playlist {playlist_id}")
             return success
         except HTTPException:
-            logger.error(f"Erreur HTTP : {http_exc.detail}")
             raise
         except Exception as e:
-            logger.exception(
-                f"Erreur inattendue lors de la suppression du média {media_id} de la playlist {playlist_id}")
             raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")

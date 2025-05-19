@@ -66,6 +66,10 @@ class PlaylistRepository(IPlaylistRepository):
         try:
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
+                    delete_media_query = "DELETE FROM public.playlist_media WHERE playlist_id=%s;"
+                    cur.execute(delete_media_query, (playlist_id,))
+
+                with conn.cursor() as cur:
                     query = "DELETE FROM public.playlist WHERE id=%s;"
                     cur.execute(query, (playlist_id,))
                     success = cur.rowcount > 0
@@ -81,25 +85,30 @@ class PlaylistRepository(IPlaylistRepository):
         try:
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
-                    updates = []
-                    values = []
+                    # Récupérer les valeurs actuelles
+                    cur.execute("SELECT title, is_private FROM public.playlist WHERE id=%s;", (playlist_id,))
+                    result = cur.fetchone()
 
-                    if title is not None:
-                        updates.append("title=%s")
-                        values.append(title)
+                    if result is None:
+                        print(f"Playlist avec ID {playlist_id} introuvable.")
+                        return False
 
-                    if is_private is not None:
-                        updates.append("is_private=%s")
-                        values.append(is_private)
+                    current_title, current_is_private = result
 
-                    if updates:
-                        query = f"UPDATE public.playlist SET {', '.join(updates)} WHERE id=%s;"
-                        values.append(playlist_id)
-                        cur.execute(query, tuple(values))
-                        success = cur.rowcount > 0
+                    # Utiliser les valeurs actuelles si aucun nouveau paramètre n'est fourni
+                    title = title if title is not None else current_title
+                    is_private = is_private if is_private is not None else current_is_private
+
+                    # Construire et exécuter la requête de mise à jour
+                    query = "UPDATE public.playlist SET title=%s, is_private=%s WHERE id=%s;"
+                    cur.execute(query, (title, is_private, playlist_id))
+                    success = cur.rowcount > 0
+
+                    if not success:
+                        print(f"Aucune ligne mise à jour pour la playlist ID {playlist_id}.")
 
         except Exception as e:
-            print(e)
+            print(f"Erreur lors de la mise à jour de la playlist : {e}")
 
         return success
 
@@ -188,6 +197,21 @@ class PlaylistRepository(IPlaylistRepository):
             print(e)
 
         return success
+
+    def media_exists_in_playlist(self, playlist_id: str, media_id: int) -> bool:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = """
+                            SELECT 1
+                            FROM public.playlist_media
+                            WHERE playlist_id = %s \
+                              AND movie_id = %s; \
+                            """
+                    cur.execute(query, (playlist_id, media_id))
+                    return cur.fetchone() is not None
+        except Exception as e:
+            return False
 
     def get_media_in_playlist(self, playlist_id: str) -> list[MediaItem]:
         media_data: list[MediaItem] = []
