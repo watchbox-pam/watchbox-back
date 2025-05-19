@@ -63,7 +63,7 @@ class MovieRepository(IMovieRepository):
         return movies
 
     def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
-        endpoint = f"/trending/movie/{time_window}?page={page}"
+        endpoint = f"/trending/movie/{time_window}?page={page}&language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
