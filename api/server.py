@@ -36,7 +36,7 @@ def initServer(app: FastAPI) -> AppType:
     app.include_router(recommendation_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(user_router)
     app.include_router(playlist_router, dependencies=[Depends(check_jwt_token)])
-    app.include_router(person_router)
+    app.include_router(person_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(review_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(search_router)
     return app
