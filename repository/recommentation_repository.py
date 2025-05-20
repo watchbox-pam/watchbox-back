@@ -3,6 +3,7 @@ from typing import List
 import db_config
 from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
 from domain.models.movieRecommendation import MovieRecommendation
+from domain.models.movieReview import MovieReview
 
 
 class RecommendationRepository(IRecommendationRepository):
@@ -83,6 +84,29 @@ class RecommendationRepository(IRecommendationRepository):
                                 keywords=result[5],
                                 credits=credits,
                                 weight=0
+                            ))
+
+        except Exception as e:
+            print(e)
+
+        return medias
+
+    def find_with_review(self, user_id: str, movie_ids: List[int]) -> List[MovieReview]:
+        medias: List[MovieReview] = []
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = "SELECT movie_id, rating FROM public.review WHERE user_id = %s AND movie_id = ANY(%s)"
+
+                    cur.execute(query, (user_id, movie_ids))
+                    results = cur.fetchall()
+
+                    if results is not None:
+                        for result in results:
+                            medias.append(MovieReview(
+                                user_id=user_id,
+                                movie_id=result[0],
+                                rating=result[1]
                             ))
 
         except Exception as e:
