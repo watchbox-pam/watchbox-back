@@ -26,7 +26,7 @@ class MovieService(IMovieService):
 
         france_providers = watch_providers.results.get("FR", {}).get("flatrate", [])
 
-        video = next((v for v in videos.results if v.get("site") == "YouTube"), None)
+        video = next((v for v in videos.results if v.get("site") == "YouTube" and v.get("type") == "Trailer"), None)
 
         casting = credits.cast if credits else None
         crew = credits.crew if credits else None
@@ -60,5 +60,9 @@ class MovieService(IMovieService):
         return self.repository.search(search_term)
 
     def find_by_time_window(self, time_window: str, page: int) -> Optional[Movie]:
-            movie = self.repository.find_by_time_window(time_window, page)
-            return movie
+        movie = self.repository.find_by_time_window(time_window, page)
+        return movie
+
+    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
+        movies = self.repository.find_by_genre(genre)
+        return movies
