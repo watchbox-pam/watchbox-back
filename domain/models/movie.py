@@ -69,3 +69,7 @@ class PopularMovieList:
 class MediaItem:
     id: int
     image: str
+
+@dataclass
+class MovieId:
+    id: int

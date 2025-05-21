@@ -16,6 +16,9 @@ class IMovieRepository(Protocol):
     def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
         ...
 
+    def movie_runtime(self, movie_ids: List[int]) -> int:
+        ...
+
     def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
         ...
 
