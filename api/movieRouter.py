@@ -51,12 +51,6 @@ async def search_movies(search: str, service: IMovieService = Depends(get_movie_
 
 @movie_router.get("/popular/{time_window}")
 async def get_movie_by_time_window(time_window: str, page: int = 1, service: IMovieService = Depends(get_movie_service)):
-    """
-    Returns the details for a movie based on the movie id
-    :param movie_id: the movie id to get
-    :param service: the service to call to get the info
-    :return: the details of the movie / or a 404 error if the id does not exist
-    """
     movies = service.find_by_time_window(time_window, page)
     if movies:
         return movies
@@ -75,3 +69,11 @@ async def get_random_movies(
         return movies
     else:
         raise HTTPException(status_code=404, detail="No movies found")
+
+@movie_router.get("/genres/{genre}")
+async def get_movie_by_genre(genre: str, service: IMovieService = Depends(get_movie_service)):
+    movies = service.find_by_genre(genre)
+    if movies:
+        return movies
+    else:
+        raise HTTPException(status_code=404, detail="Movies not found")

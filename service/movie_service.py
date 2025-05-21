@@ -2,14 +2,16 @@ from typing import Optional, List
 import random
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
-from domain.models.emotion import Emotion
-from domain.models.movie import Movie, MovieDetail
+from domain.models.movie import Movie, MovieDetail, PopularMovieList
 from domain.interfaces.repositories.i_release_dates_repository import IReleaseDatesRepository
 from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
 from domain.interfaces.repositories.i_videos_repository import IVideosRepository
 from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
+<<<<<<< HEAD
 from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.movie_list_item import MovieListItem
+=======
+>>>>>>> develop
 
 
 class MovieService(IMovieService):
@@ -29,7 +31,7 @@ class MovieService(IMovieService):
 
         france_providers = watch_providers.results.get("FR", {}).get("flatrate", [])
 
-        video = next((v for v in videos.results if v.get("site") == "YouTube"), None)
+        video = next((v for v in videos.results if v.get("site") == "YouTube" and v.get("type") == "Trailer"), None)
 
         casting = credits.cast if credits else None
         crew = credits.crew if credits else None
@@ -66,6 +68,7 @@ class MovieService(IMovieService):
         movie = self.repository.find_by_time_window(time_window, page)
         return movie
 
+
     def get_random_movies(self, count: int = 3) -> Optional[List[MovieListItem]]:
         """
         Récupère un nombre défini de films aléatoires
@@ -81,5 +84,9 @@ class MovieService(IMovieService):
 
         if not movies or len(movies) == 0:
             return None
+
+
+    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
+        movies = self.repository.find_by_genre(genre)
 
         return movies

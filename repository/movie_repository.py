@@ -1,6 +1,5 @@
 from typing import Optional, List
 
-import db_config
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.models.movie import Movie, PopularMovieList, MovieDetail
 from domain.models.movieRecommendation import MovieRecommendation
@@ -63,7 +62,21 @@ class MovieRepository(IMovieRepository):
         return movies
 
     def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
-        endpoint = f"/trending/movie/{time_window}?page={page}"
+        endpoint = f"/trending/movie/{time_window}?page={page}&language=fr-FR"
+
+        result = call_tmdb_api(endpoint)
+
+        movies = PopularMovieList(
+            page=result["page"],
+            results=result["results"],
+            total_results=result["total_pages"],
+            total_pages=result["total_results"]
+        )
+
+        return movies
+
+    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
+        endpoint = f"/discover/movie?with_genres={genre}&include_adult=false&include_video=false&language=fr-FR&page=1&sort_by=popularity.desc"
 
         result = call_tmdb_api(endpoint)
 

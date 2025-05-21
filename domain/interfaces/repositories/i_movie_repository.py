@@ -17,3 +17,6 @@ class IMovieRepository(Protocol):
 
     def get_random_movies(self, count: int = 3) -> Optional[List[MovieListItem]]:
         ...
+
+    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
+        ...
