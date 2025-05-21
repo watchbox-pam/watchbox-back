@@ -80,6 +80,6 @@ class UserService(IUserService):
 
         if hashed_password.hexdigest() == user_exists.password:
             user_token = create_jwt_token({ "user_id": str(user_exists.id) })
-            return { "user_id": str(user_exists.id), "token": user_token }
+            return { "user_id": str(user_exists.id), "token": user_token, "username": user_exists.username }
         else:
             raise Exception("Mot de passe incorrect")
