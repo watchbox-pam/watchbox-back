@@ -1,13 +1,13 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from domain.interfaces.repositories.i_search_repository import ISearchRepository
 from utils.tmdb_service import call_tmdb_api
 
 
 class SearchRepository(ISearchRepository):
-    def search_all(self, search_term: str) -> Dict[str, List[Dict[str, Any]]]:
+    def search_all(self, search_term: str, providers: Optional[List[int]] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Search for movies, TV shows, and people matching the search term
+        Search for movies, TV shows, and people matching the search term and optional provider filters
         """
         endpoint = f"/search/multi?query={search_term}&language=fr-FR&page=1&include_adult=false"
         result = call_tmdb_api(endpoint)
@@ -20,7 +20,17 @@ class SearchRepository(ISearchRepository):
         if "results" in result:
             for item in result["results"]:
                 media_type = item.get("media_type")
+
                 if media_type == "movie":
+                    # If providers filter is active, check if the movie is available on selected providers
+                    if providers:
+                        movie_providers = self._get_movie_providers(item.get("id"))
+                        provider_ids = [p.get("id") for p in movie_providers]
+
+                        # If there's no intersection between requested providers and movie providers, skip this movie
+                        if not set(providers).intersection(set(provider_ids)):
+                            continue
+
                     movies.append({
                         "id": item.get("id"),
                         "title": item.get("title", ""),
@@ -51,9 +61,9 @@ class SearchRepository(ISearchRepository):
             "tv": tv
         }
 
-    def search_movies(self, search_term: str) -> List[Dict[str, Any]]:
+    def search_movies(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
         """
-        Search only for movies matching the search term
+        Search only for movies matching the search term and optional provider filters
         """
         endpoint = f"/search/movie?query={search_term}&language=fr-FR&page=1&include_adult=false"
         result = call_tmdb_api(endpoint)
@@ -61,6 +71,15 @@ class SearchRepository(ISearchRepository):
         movies = []
         if "results" in result:
             for item in result["results"]:
+                # If providers filter is active, check if the movie is available on selected providers
+                if providers:
+                    movie_providers = self._get_movie_providers(item.get("id"))
+                    provider_ids = [p.get("id") for p in movie_providers]
+
+                    # If there's no intersection between requested providers and movie providers, skip this movie
+                    if not set(providers).intersection(set(provider_ids)):
+                        continue
+
                 movies.append({
                     "id": item.get("id"),
                     "title": item.get("title", ""),
@@ -106,3 +125,37 @@ class SearchRepository(ISearchRepository):
                 people.append(person)
 
         return people
+
+    def _get_movie_providers(self, movie_id: int) -> List[Dict[str, Any]]:
+        """
+        Helper method to get providers for a specific movie
+        """
+        endpoint = f"/movie/{movie_id}/watch/providers"
+        result = call_tmdb_api(endpoint)
+
+        providers = []
+        if "results" in result and "FR" in result["results"]:
+            # Get the French providers
+            fr_providers = result["results"]["FR"]
+
+            # Combine all types of providers (flatrate, rent, buy)
+            all_providers = []
+            if "flatrate" in fr_providers:
+                all_providers.extend(fr_providers["flatrate"])
+            if "rent" in fr_providers:
+                all_providers.extend(fr_providers["rent"])
+            if "buy" in fr_providers:
+                all_providers.extend(fr_providers["buy"])
+
+            # Remove duplicates by provider_id
+            seen_ids = set()
+            for provider in all_providers:
+                if provider["provider_id"] not in seen_ids:
+                    seen_ids.add(provider["provider_id"])
+                    providers.append({
+                        "id": provider.get("provider_id"),
+                        "name": provider.get("provider_name", ""),
+                        "logo_path": provider.get("logo_path")
+                    })
+
+        return providers
