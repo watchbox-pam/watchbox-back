@@ -3,7 +3,7 @@ from typing import List, Optional
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.models.playlist import Playlist
-from domain.models.movie import MediaItem, MovieId
+from domain.models.movie import MediaItem
 from repository.movie_repository import MovieRepository
 from repository.playlist_repository import PlaylistRepository
 from service.playlist_service import PlaylistService

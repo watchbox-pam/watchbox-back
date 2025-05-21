@@ -1,6 +1,7 @@
 from typing import Protocol, Optional, List
 
 from domain.models.movie import Movie, PopularMovieList, MovieDetail
+from domain.models.movie_list_item import MovieListItem
 
 from domain.models.movieRecommendation import MovieRecommendation
 

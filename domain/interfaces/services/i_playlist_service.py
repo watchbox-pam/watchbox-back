@@ -1,6 +1,6 @@
 from typing import Optional, List, Protocol
 
-from domain.models.movie import MediaItem, MovieId
+from domain.models.movie import MediaItem
 from domain.models.playlist import Playlist
 
 
