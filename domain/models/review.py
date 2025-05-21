@@ -14,10 +14,10 @@ class Review:
     id: str
     rating: int | None
     comment: str | None
-    has_spoiler: bool
-    movie_id: int | None
-    tv_id: int | None
-    tv_episode_id: int | None
-    user_id: UUID4
-    created_at: datetime
+    isSpoiler: bool
+    movieId: int | None
+    tvId: int | None
+    tvEpisodeId: int | None
+    userId: UUID4
+    createdAt: datetime
     user: UserInfo | None

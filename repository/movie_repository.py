@@ -4,7 +4,6 @@ import db_config
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.models.movie import Movie, PopularMovieList, MovieDetail
 from domain.models.movieRecommendation import MovieRecommendation
-from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
 
 
@@ -104,33 +103,3 @@ class MovieRepository(IMovieRepository):
         except Exception as e:
             print(f"[ERREUR] Exception dans movie_runtime : {e}")
             return 0
-
-    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
-        """
-        Sélectionne aléatoirement des films populaires directement dans la base de données
-        (plus efficace pour les grandes bases de données)
-        """
-        movies: List[Movie] = []
-        try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = """
-                        SELECT id, title, poster_path FROM public.movie 
-                        WHERE popularity >= 70
-                        ORDER BY RANDOM() 
-                        LIMIT %s;
-                    """
-                    cur.execute(query, (count,))
-                    results = cur.fetchall()
-
-                    for result in results:
-                        movies.append(MovieListItem(
-                            id=result[0],
-                            title=result[1],
-                            poster_path=result[2]
-                        ))
-
-        except Exception as e:
-            print(e)
-
-        return movies

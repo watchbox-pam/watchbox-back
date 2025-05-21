@@ -63,16 +63,6 @@ async def get_movie_by_time_window(time_window: str, page: int = 1, service: IMo
     else:
         raise HTTPException(status_code=404, detail="Movies not found")
 
-@movie_router.get("/random")
-async def get_random_movies(
-    count: int = 50,
-    service: IMovieService = Depends(get_movie_service)
-):
-    movies = service.get_random_movies(count)
-    if movies:
-        return movies
-    else:
-        raise HTTPException(status_code=404, detail="No movies found")
 
 @movie_router.get("/genres/{genre}")
 async def get_movie_by_genre(genre: str, service: IMovieService = Depends(get_movie_service)):
