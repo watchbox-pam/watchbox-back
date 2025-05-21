@@ -93,7 +93,7 @@ class MovieRepository(IMovieRepository):
 
         return movies
 
-    def get_random_movies(self, count: int = 3) -> Optional[List[MovieListItem]]:
+    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
         """
         Sélectionne aléatoirement des films populaires directement dans la base de données
         (plus efficace pour les grandes bases de données)

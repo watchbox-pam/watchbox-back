@@ -68,12 +68,12 @@ class MovieService(IMovieService):
         movies = self.repository.find_by_genre(genre)
         return movies
 
-    def get_random_movies(self, count: int = 3) -> Optional[List[MovieListItem]]:
+    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
         """
         Récupère un nombre défini de films aléatoires
 
         Args:
-            count: Nombre de films aléatoires à retourner (défaut: 10)
+            count: Nombre de films aléatoires à retourner (défaut: 50)
 
         Returns:
             Liste de films aléatoires parmi les plus populaires

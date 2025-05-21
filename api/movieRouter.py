@@ -59,7 +59,7 @@ async def get_movie_by_time_window(time_window: str, page: int = 1, service: IMo
 
 @movie_router.get("/random")
 async def get_random_movies(
-    count: int = 3,
+    count: int = 50,
     service: IMovieService = Depends(get_movie_service)
 ):
     print(f"count demandé : {count}")
