@@ -1,5 +1,5 @@
 from typing import Optional, List
-
+import random
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
 from domain.models.emotion import Emotion
@@ -9,6 +9,7 @@ from domain.interfaces.repositories.i_credits_repository import ICreditsReposito
 from domain.interfaces.repositories.i_videos_repository import IVideosRepository
 from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
 from domain.models.movieRecommendation import MovieRecommendation
+from domain.models.movie_list_item import MovieListItem
 
 
 class MovieService(IMovieService):
@@ -62,5 +63,23 @@ class MovieService(IMovieService):
         return self.repository.search(search_term)
 
     def find_by_time_window(self, time_window: str, page: int) -> Optional[Movie]:
-            movie = self.repository.find_by_time_window(time_window, page)
-            return movie
+        movie = self.repository.find_by_time_window(time_window, page)
+        return movie
+
+    def get_random_movies(self, count: int = 3) -> Optional[List[MovieListItem]]:
+        """
+        Récupère un nombre défini de films aléatoires
+
+        Args:
+            count: Nombre de films aléatoires à retourner (défaut: 10)
+
+        Returns:
+            Liste de films aléatoires parmi les plus populaires
+        """
+        # Récupérer tous les films
+        movies = self.repository.get_random_movies(count)
+
+        if not movies or len(movies) == 0:
+            return None
+
+        return movies
