@@ -1,6 +1,6 @@
 from typing import Optional, List, Protocol
 
-from domain.models.movie import MediaItem
+from domain.models.movie import MediaItem, MovieId
 from domain.models.playlist import Playlist
 from domain.models.playlist_media import PlaylistMedia
 
@@ -34,6 +34,12 @@ class IPlaylistRepository(Protocol):
         ...
 
     def get_media_in_playlist(self, playlist_id: str) -> List[MediaItem]:
+        ...
+
+    def get_playlist_by_title(self,user_id: str, title: str) -> Optional[Playlist]:
+        ...
+
+    def get_movies_from_playlist(self, user_id: str, title: str) -> List[MovieId]:
         ...
 
     def remove_media_from_playlist(self, playlist_id: str, media_id: int) -> bool:

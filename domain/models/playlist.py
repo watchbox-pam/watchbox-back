@@ -15,3 +15,7 @@ class PlaylistUpdateRequest(BaseModel):
     user_id: str
     title: Optional[str] = None
     is_private: Optional[bool] = None
+
+class RuntimeResponse(BaseModel):
+    total_runtime: int
+    movie_count: int

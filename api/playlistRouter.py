@@ -3,10 +3,11 @@ from typing import List, Optional
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.models.playlist import Playlist
-from domain.models.movie import MediaItem
+from domain.models.movie import MediaItem, MovieId
+from repository.movie_repository import MovieRepository
 from repository.playlist_repository import PlaylistRepository
 from service.playlist_service import PlaylistService
-from domain.models.playlist import PlaylistUpdateRequest
+from domain.models.playlist import PlaylistUpdateRequest, RuntimeResponse
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -16,7 +17,8 @@ playlist_router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
 def get_playlist_service() -> IPlaylistService:
     repository: IPlaylistRepository = PlaylistRepository()
-    return PlaylistService(repository)
+    movie_repository = MovieRepository()
+    return PlaylistService(repository, movie_repository)
 
 @playlist_router.post("/", response_model=bool)
 async def create_playlist(playlist: Playlist, service: IPlaylistService = Depends(get_playlist_service)):
@@ -96,3 +98,16 @@ async def remove_media_from_playlist(
         return success
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne du serveur : {str(e)}")
+
+@playlist_router.get("/{user_id}/{title}/runtime", response_model=RuntimeResponse)
+async def get_playlist_runtime(
+    user_id: str,
+    title: str,
+    service: IPlaylistService = Depends(get_playlist_service)
+):
+    try:
+        return service.get_movie_runtime_by_playlist_title(user_id, title)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur serveur : {str(e)}")
