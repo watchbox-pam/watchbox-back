@@ -62,9 +62,7 @@ async def get_random_movies(
     count: int = 50,
     service: IMovieService = Depends(get_movie_service)
 ):
-    print(f"count demandé : {count}")
     movies = service.get_random_movies(count)
-    print(f"movies récupérés : {movies}")
     if movies:
         return movies
     else:
