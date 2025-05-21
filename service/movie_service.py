@@ -2,13 +2,11 @@ from typing import Optional, List
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
-from domain.models.emotion import Emotion
 from domain.models.movie import Movie, MovieDetail, PopularMovieList
 from domain.interfaces.repositories.i_release_dates_repository import IReleaseDatesRepository
 from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
 from domain.interfaces.repositories.i_videos_repository import IVideosRepository
 from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
-from domain.models.movieRecommendation import MovieRecommendation
 
 
 class MovieService(IMovieService):
@@ -28,7 +26,7 @@ class MovieService(IMovieService):
 
         france_providers = watch_providers.results.get("FR", {}).get("flatrate", [])
 
-        video = next((v for v in videos.results if v.get("site") == "YouTube"), None)
+        video = next((v for v in videos.results if v.get("site") == "YouTube" and v.get("type") == "Trailer"), None)
 
         casting = credits.cast if credits else None
         crew = credits.crew if credits else None

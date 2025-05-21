@@ -108,7 +108,7 @@ def mock_videos_repository():
     repository = Mock()
     repository.find_by_id.return_value = Mock(
         results=[
-            {"site": "YouTube", "key": "video_key"}
+            {"site": "YouTube", "type": "Trailer", "key": "video_key"}
         ]
     )
     return repository
