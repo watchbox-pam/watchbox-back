@@ -84,14 +84,16 @@ class RecommendationService(IRecommendationService):
         # Adding data from the history medias
         if user_has_history_content:
             history_movie_reviews: List[MovieReview] = self.repository.find_with_review(user_id, history_media_ids)
-            print(history_movie_reviews)
 
             for history_media in history_media_infos:
                 ratings: List[int] = []
                 for r in history_movie_reviews:
                     if r.movie_id == history_media.id:
                         ratings.append(r.rating)
-                media_weight = statistics.fmean(ratings)
+                media_weight = 5
+                if len(ratings) > 0:
+                    media_weight = statistics.fmean(ratings)
+                media_weight = media_weight - 5
                 for keyword in history_media.keywords:
                     keywords.append({ "value": keyword, "weight": media_weight })
                 for credit in history_media.credits:
@@ -117,7 +119,7 @@ class RecommendationService(IRecommendationService):
         user_has_any_content: bool = user_has_watchlist_content or user_has_history_content or user_has_favorites_content
         for media in genre_medias:
             media.weight = len(media.genres)
-            if user_has_any_content > 0:
+            if user_has_any_content:
                 # Check if media is in the user watchlist
                 if media.id in watchlist_media_ids:
                     media.weight += 10
