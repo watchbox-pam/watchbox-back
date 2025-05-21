@@ -18,8 +18,8 @@ class ReviewRepository(IReviewRepository):
                              "(rating, comment, has_spoiler_warning, movie_id, tv_id, tv_episode_id, user_id, created_at) "
                              "VALUES (%s, %s, %s, %s, %s, %s, %s, %s);")
 
-                    values = (review.rating, review.comment, review.has_spoiler, review.movie_id,
-                              review.tv_id, review.tv_episode_id, review.user_id, datetime.now())
+                    values = (review.rating, review.comment, review.isSpoiler, review.movieId,
+                              review.tvId, review.tvEpisodeId, review.userId, datetime.now())
 
                     cur.execute(query, values)
 
@@ -47,13 +47,13 @@ class ReviewRepository(IReviewRepository):
                                 id=result[0],
                                 rating=result[1],
                                 comment=result[2],
-                                has_spoiler=result[3],
+                                isSpoiler=result[3],
                                 user=UserInfo(username=result[4], picture=result[5]),
-                                movie_id=0,
-                                tv_id=0,
-                                tv_episode_id=0,
-                                user_id="",
-                                created_at=""
+                                movieId=0,
+                                tvId=0,
+                                tvEpisodeId=0,
+                                userId="",
+                                createdAt=""
                             ))
 
         except Exception as e:
