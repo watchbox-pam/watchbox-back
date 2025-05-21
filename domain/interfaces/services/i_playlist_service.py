@@ -28,3 +28,6 @@ class IPlaylistService(Protocol):
 
     def remove_media_from_playlist(self, playlist_id: str, media_id: int) -> bool:
         ...
+
+    def get_movie_runtime_by_playlist_title(self, playlist_id: str) -> dict:
+        ...
