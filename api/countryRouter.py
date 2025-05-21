@@ -13,7 +13,7 @@ def get_country_service() -> ICountryService:
     repository: ICountryRepository = CountryRepository()
     return CountryService(repository)
 
-@country_router.get("/")
+@country_router.get("")
 async def get_all_countries(service: ICountryService = Depends(get_country_service)):
     countries = service.find_all_countries()
     if countries:

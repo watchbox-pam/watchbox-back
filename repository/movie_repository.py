@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
-from domain.models.movie import Movie, PopularMovieList, MovieDetail
+from domain.models.movie import Movie, PopularMovieList, MovieDetail, MovieId
 from domain.models.movieRecommendation import MovieRecommendation
 from utils.tmdb_service import call_tmdb_api
 
@@ -89,3 +89,16 @@ class MovieRepository(IMovieRepository):
         )
 
         return movies
+
+    def movie_runtime(self, movie_ids: List[int]) -> int:
+        try:
+            print(f"[DEBUG] Calcul du runtime pour les IDs : {movie_ids}")
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT SUM(runtime) FROM public.movie WHERE id = ANY(%s);", (movie_ids,))
+                    result = cur.fetchone()
+                    print(f"[DEBUG] Résultat SQL : {result}")
+                    return result[0] if result and result[0] else 0
+        except Exception as e:
+            print(f"[ERREUR] Exception dans movie_runtime : {e}")
+            return 0
