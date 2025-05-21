@@ -5,7 +5,7 @@ import uuid
 import db_config
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.playlist import Playlist
-from domain.models.movie import MediaItem, MovieId
+from domain.models.movie import MediaItem
 from domain.models.playlist_media import PlaylistMedia
 
 
@@ -212,58 +212,6 @@ class PlaylistRepository(IPlaylistRepository):
                     return cur.fetchone() is not None
         except Exception as e:
             return False
-
-    def get_movies_from_playlist(self, user_id: str, title: str) -> list[MovieId]:
-        movies: list[MovieId] = []
-
-        try:
-            playlist = self.get_playlist_by_title(user_id, title)
-            if not playlist:
-                print(f"Aucune playlist trouvée avec le titre '{title}' pour l'utilisateur {user_id}.")
-                return movies
-
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = """
-                            SELECT m.id
-                            FROM public.playlist_media pm
-                                     JOIN public.movie m ON pm.movie_id = m.id
-                            WHERE pm.playlist_id = %s; \
-                            """
-                    cur.execute(query, (playlist.id,))
-                    results = cur.fetchall()
-
-                    for result in results:
-                        movies.append(MovieId(id=result[0]))
-
-        except Exception as e:
-            print(f"Erreur lors de la récupération des films : {e}")
-
-        return movies
-
-    def get_playlist_by_title(self, user_id: str, title: str) -> Optional[Playlist]:
-        playlist: Optional[Playlist] = None
-
-        try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = "SELECT * FROM public.playlist WHERE user_id=%s AND title=%s;"
-                    cur.execute(query, (user_id, title))
-                    result = cur.fetchone()
-
-                    if result is not None:
-                        playlist = Playlist(
-                            id=str(result[0]),
-                            user_id=str(result[1]),
-                            title=result[2],
-                            is_private=result[3],
-                            created_at=result[4],
-                        )
-
-        except Exception as e:
-            print(e)
-
-        return playlist
 
     def get_media_in_playlist(self, playlist_id: str) -> list[MediaItem]:
         media_data: list[MediaItem] = []

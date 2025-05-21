@@ -2,7 +2,7 @@ from typing import Optional, List
 
 import db_config
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
-from domain.models.movie import Movie, PopularMovieList, MovieDetail, MovieId
+from domain.models.movie import Movie, PopularMovieList, MovieDetail
 from domain.models.movieRecommendation import MovieRecommendation
 from utils.tmdb_service import call_tmdb_api
 
