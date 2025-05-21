@@ -99,14 +99,13 @@ async def remove_media_from_playlist(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne du serveur : {str(e)}")
 
-@playlist_router.get("/{user_id}/{title}/runtime", response_model=RuntimeResponse)
+@playlist_router.get("/{playlist_id}/runtime", response_model=RuntimeResponse)
 async def get_playlist_runtime(
-    user_id: str,
-    title: str,
+    playlist_id: str,
     service: IPlaylistService = Depends(get_playlist_service)
 ):
     try:
-        return service.get_movie_runtime_by_playlist_title(user_id, title)
+        return service.get_movie_runtime_by_playlist_title(playlist_id)
     except HTTPException as e:
         raise e
     except Exception as e:

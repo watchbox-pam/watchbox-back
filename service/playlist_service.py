@@ -11,7 +11,7 @@ from datetime import datetime
 from fastapi import HTTPException
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
-from domain.models.movie import MediaItem, MovieId
+from domain.models.movie import MediaItem
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.models.playlist import Playlist
@@ -109,15 +109,15 @@ class PlaylistService(IPlaylistService):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
 
-    def get_movie_runtime_by_playlist_title(self, user_id: str, title: str) -> dict[str, int]:
+    def get_movie_runtime_by_playlist_title(self, playlist_id: str) -> dict:
         try:
-            logger.info(f"Récupération des films pour la playlist '{title}' et l'utilisateur '{user_id}'")
-            movies = self.repository.get_movies_from_playlist(user_id, title)
+            logger.info(f"Récupération des films pour la playlist '{playlist_id}'")
+            movies = self.repository.get_playlist_medias(playlist_id)
             if not movies:
                 logger.error("Aucun film trouvé dans la playlist.")
                 raise HTTPException(status_code=404, detail="Aucun média trouvé dans cette playlist.")
 
-            movie_ids = [movie.id for movie in movies]
+            movie_ids = [movie.movie_id for movie in movies]
             movie_count = len(movie_ids)
             logger.info(f"IDs des films récupérés : {movie_ids}")
 
