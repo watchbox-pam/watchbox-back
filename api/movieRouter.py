@@ -25,7 +25,7 @@ def get_movie_service() -> IMovieService:
     watch_providers_repository: IWatchProvidersRepository = WatchProvidersRepository()
     return MovieService(repository, release_dates_repository, credits_repository, videos_repository, watch_providers_repository)
 
-@movie_router.get("/{movie_id}")
+@movie_router.get("/id/{movie_id}")
 async def get_movie_by_id(movie_id: int, service: IMovieService = Depends(get_movie_service)):
     """
     Returns the details for a movie based on the movie id
@@ -57,6 +57,16 @@ async def get_movie_by_time_window(time_window: str, page: int = 1, service: IMo
     else:
         raise HTTPException(status_code=404, detail="Movies not found")
 
+@movie_router.get("/random")
+async def get_random_movies(
+    count: int = 50,
+    service: IMovieService = Depends(get_movie_service)
+):
+    movies = service.get_random_movies(count)
+    if movies:
+        return movies
+    else:
+        raise HTTPException(status_code=404, detail="No movies found")
 
 @movie_router.get("/genres/{genre}")
 async def get_movie_by_genre(genre: str, service: IMovieService = Depends(get_movie_service)):

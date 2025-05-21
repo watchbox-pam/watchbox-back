@@ -7,6 +7,7 @@ from domain.interfaces.repositories.i_release_dates_repository import IReleaseDa
 from domain.interfaces.repositories.i_credits_repository import ICreditsRepository
 from domain.interfaces.repositories.i_videos_repository import IVideosRepository
 from domain.interfaces.repositories.i_watch_providers_repository import IWatchProvidersRepository
+from domain.models.movie_list_item import MovieListItem
 
 
 class MovieService(IMovieService):
@@ -65,4 +66,22 @@ class MovieService(IMovieService):
 
     def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
         movies = self.repository.find_by_genre(genre)
+        return movies
+
+    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
+        """
+        Récupère un nombre défini de films aléatoires
+
+        Args:
+            count: Nombre de films aléatoires à retourner (défaut: 50)
+
+        Returns:
+            Liste de films aléatoires parmi les plus populaires
+        """
+        # Récupérer tous les films
+        movies = self.repository.get_random_movies(count)
+
+        if not movies or len(movies) == 0:
+            return None
+
         return movies
