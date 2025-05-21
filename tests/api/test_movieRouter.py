@@ -108,7 +108,7 @@ class TestMovieRouter:
 
     # Test de la route pour récupérer un film par ID
     def test_get_movie_by_id(self, client, mock_movie_service):
-        response = client.get("/movies/id/123")
+        response = client.get("/movies/123")
 
         # Vérification que la réponse est correcte
         assert response.status_code == 200
@@ -123,7 +123,7 @@ class TestMovieRouter:
     def test_get_movie_by_id_not_found(self, client, mock_movie_service):
         mock_movie_service.find_by_id.return_value = None
 
-        response = client.get("/movies/id/999")
+        response = client.get("/movies/999")
 
         # Vérification que la réponse est une erreur 404
         assert response.status_code == 404

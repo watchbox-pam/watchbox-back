@@ -1,7 +1,6 @@
-from typing import Protocol, Optional, List
+from typing import Protocol, Optional
 
 from domain.models.movie import Movie, PopularMovieList, MovieDetail
-from domain.models.movie_list_item import MovieListItem
 
 
 class IMovieService(Protocol):
@@ -15,7 +14,4 @@ class IMovieService(Protocol):
         ...
 
     def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
-        ...
-
-    def get_random_movies(self, count: int = 3) -> Optional[List[MovieListItem]]:
         ...
