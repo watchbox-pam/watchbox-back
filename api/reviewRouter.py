@@ -19,7 +19,7 @@ def get_review_service() -> IReviewService:
     return ReviewService(repository, playlist_repository)
 
 
-@review_router.post("/")
+@review_router.post("")
 async def create_review(review: Review, service: IReviewService = Depends(get_review_service)):
     try:
         review_creation = service.create_review(review)
@@ -32,7 +32,7 @@ async def create_review(review: Review, service: IReviewService = Depends(get_re
 
 
 @review_router.get("/movie/{movie_id}")
-async def create_review(movie_id: int, service: IReviewService = Depends(get_review_service)):
+async def get_reviews(movie_id: int, service: IReviewService = Depends(get_review_service)):
     try:
         reviews = service.get_reviews_by_media(movie_id)
         return reviews

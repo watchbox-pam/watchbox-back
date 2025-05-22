@@ -12,14 +12,16 @@ from fastapi import HTTPException
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.movie import MediaItem
+from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_playlist_service import IPlaylistService
 from domain.models.playlist import Playlist
 from domain.models.playlist_media import PlaylistMedia
 
 
 class PlaylistService(IPlaylistService):
-    def __init__(self, repository: IPlaylistRepository):
+    def __init__(self, repository: IPlaylistRepository, movie_repository: Optional[IMovieRepository] = None):
         self.repository = repository
+        self.movie_repository = movie_repository
 
     def create_playlist(self, playlist: Playlist) -> bool:
         existing_playlists = self.repository.get_playlists_by_user_id(playlist.user_id)
@@ -105,4 +107,26 @@ class PlaylistService(IPlaylistService):
         except HTTPException:
             raise
         except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
+
+    def get_movie_runtime_by_playlist_title(self, playlist_id: str) -> dict:
+        try:
+            logger.info(f"Récupération des films pour la playlist '{playlist_id}'")
+            movies = self.repository.get_playlist_medias(playlist_id)
+            if not movies:
+                logger.error("Aucun film trouvé dans la playlist.")
+                raise HTTPException(status_code=404, detail="Aucun média trouvé dans cette playlist.")
+
+            movie_ids = [movie.movie_id for movie in movies]
+            movie_count = len(movie_ids)
+            logger.info(f"IDs des films récupérés : {movie_ids}")
+
+            total_runtime = self.movie_repository.movie_runtime(movie_ids)
+            if total_runtime is None:
+                logger.error("Durée totale des films introuvable.")
+                raise HTTPException(status_code=500, detail="Erreur lors du calcul de la durée totale des films.")
+
+            return {"total_runtime": total_runtime, "movie_count": movie_count}
+        except Exception as e:
+            logger.error(f"Erreur interne : {e}")
             raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
