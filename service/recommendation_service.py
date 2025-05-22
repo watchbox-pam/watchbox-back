@@ -90,7 +90,7 @@ class RecommendationService(IRecommendationService):
                 for r in history_movie_reviews:
                     if r.movie_id == history_media.id:
                         ratings.append(r.rating)
-                media_weight = 5
+                media_weight = 0
                 if len(ratings) > 0:
                     media_weight = statistics.fmean(ratings)
                 media_weight = media_weight - 5
