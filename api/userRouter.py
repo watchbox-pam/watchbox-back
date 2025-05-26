@@ -4,6 +4,7 @@ from starlette.exceptions import HTTPException
 from typing import cast
 import uuid
 
+from api.auth.verify_auth_token import check_jwt_token
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.userLogin import UserLogin
@@ -47,7 +48,7 @@ async def login_user(user: UserLogin, service: IUserService = Depends(get_user_s
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@user_router.get("/{id}")
+@user_router.get("/{id}", dependencies=[Depends(check_jwt_token)])
 async def get_user_by_id(id: str, service: IUserService = Depends(get_user_service)):
     try:
         # Validate UUID format
