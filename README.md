@@ -4,7 +4,7 @@
 
 - Installer Python 3.13 : `brew install python@3.13`
 
-- Créer le virtual env `python -m venv /path/to/new/virtual/environment`
+- Créer le virtual env `python -m venv /path/to/new/virtual/environment` ou bien `python3 -m venv .venv`
 
 - Activer le venv `source .venv/bin/activate` pour Mac / Linux ou `.venv\Scripts\activate` pour Windows
 
