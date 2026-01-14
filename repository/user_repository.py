@@ -8,7 +8,7 @@ from domain.models.userSignup import UserSignup
 
 
 class UserRepository(IUserRepository):
-    def create_user(self, user: UserSignup) -> bool:
+    def create_user(self, user: UserSignup, verification_token: str, password_reset_token: str) -> bool:
 
         success: bool = False
 
@@ -18,10 +18,10 @@ class UserRepository(IUserRepository):
                 with conn.cursor() as cur:
 
                     query = ("INSERT INTO public.user"
-                             "(id, username, email, password, salt, birthdate, country, profile_picture_path, banner_path, is_private, history_private, adult_content, last_connection, created_at) "
-                             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);")
+                             "(id, username, email, password, salt, birthdate, country, profile_picture_path, banner_path, is_private, history_private, adult_content, last_connection, created_at, is_verified, verification_token, password_reset_token) "
+                             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);")
 
-                    values = (user.id, user.username, user.email, user.password, user.salt, user.birthdate, user.country, "default.png", "default.png", False, False, False, datetime.datetime.now(), datetime.datetime.now())
+                    values = (user.id, user.username, user.email, user.password, user.salt, user.birthdate, user.country, "default.png", "default.png", False, False, False, datetime.datetime.now(), datetime.datetime.now(), False, verification_token, password_reset_token)
 
                     cur.execute(query, values)
 
@@ -60,6 +60,9 @@ class UserRepository(IUserRepository):
                             last_connection=result[11],
                             created_at=result[12],
                             salt=result[13],
+                            is_verified=result[14],
+                            verification_token=result[15],
+                            password_reset_token=result[16],
                         )
 
         except (Exception) as e:
@@ -95,6 +98,9 @@ class UserRepository(IUserRepository):
                             last_connection=result[11],
                             created_at=result[12],
                             salt=result[13],
+                            is_verified=result[14],
+                            verification_token=result[15],
+                            password_reset_token=result[16],
                         )
 
         except (Exception) as e:
@@ -130,6 +136,9 @@ class UserRepository(IUserRepository):
                             last_connection=result[11],
                             created_at=result[12],
                             salt=result[13],
+                            is_verified=result[14],
+                            verification_token=result[15],
+                            password_reset_token=result[16],
                         )
 
         except (Exception) as e:

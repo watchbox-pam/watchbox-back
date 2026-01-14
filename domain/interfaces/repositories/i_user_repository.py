@@ -5,7 +5,7 @@ from domain.models.user import User
 
 
 class IUserRepository(Protocol):
-    def create_user(self, user: UserSignup) -> bool:
+    def create_user(self, user: UserSignup, verification_token: str, password_reset_token: str) -> bool:
         ...
 
     def get_user_by_username(self, username: str) -> Optional[User]:

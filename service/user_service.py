@@ -23,24 +23,41 @@ class UserService(IUserService):
 
     def create_user(self, user: UserSignup) -> dict[str, str]:
 
+        # Check if username is taken
         username_exists = self.get_user_by_username(user.username)
         if username_exists is not None:
             raise Exception("Ce pseudo est déjà utilisé")
 
+        # Check if email address is valid
         pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
         if re.match(pattern, user.email) is None:
             raise Exception("Cette adresse mail n'est pas valide")
 
+        # Check if email address is taken
         email_exists = self.get_user_by_email(user.email)
         if email_exists is not None:
             raise Exception("Cette adresse mail est déjà utilisée")
 
+        # Generate user id
         user_id: uuid = uuid.uuid4()
         user.id = str(user_id)
+
+        # Hash user password with pepper
         pepper = os.getenv("PEPPER")
         hashed_password = sha256((user.password + pepper).encode('utf-8'))
         user.password = hashed_password.hexdigest()
-        if self.repository.create_user(user):
+
+        # Generate verification token
+        verification_token_uuid = uuid.uuid4()
+        hashed_verification_token = sha256(str(verification_token_uuid).encode('utf-8'))
+        verification_token = hashed_verification_token.hexdigest()
+
+        # Generate password reset token
+        password_reset_token_uuid = uuid.uuid4()
+        hashed_password_reset_token = sha256(str(password_reset_token_uuid).encode('utf-8'))
+        password_reset_token = hashed_password_reset_token.hexdigest()
+
+        if self.repository.create_user(user, verification_token, password_reset_token):
             self.playlist_repository.create_playlist_on_register(user_id=user.id)
             user_token = create_jwt_token({"user_id": str(user_id)})
             return { "user_id": str(user_id), "token": user_token }

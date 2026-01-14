@@ -16,5 +16,8 @@ class User:
     is_private: bool
     history_private: bool
     adult_content: bool
+    is_verified: bool
+    verification_token: str
+    password_reset_token: str
     last_connection: datetime
     created_at: datetime
