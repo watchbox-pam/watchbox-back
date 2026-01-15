@@ -86,12 +86,8 @@ async def delete_user(
     user_id: str = Depends(check_jwt_token),
     service: IUserService = Depends(get_user_service)
 ):
-    """
-    Delete a user account
-    Only the user themselves can delete their account
-    """
+
     try:
-        # Validate UUID format
         try:
             uuid_obj = uuid.UUID(id)
             id_str = str(uuid_obj)
@@ -101,14 +97,6 @@ async def delete_user(
                 detail="Format d'ID utilisateur invalide"
             )
 
-        # Verify the user is deleting their own account
-        if user_id != id_str:
-            raise HTTPException(
-                status_code=403,
-                detail="Vous ne pouvez supprimer que votre propre compte"
-            )
-
-        # Delete the user
         success = service.delete_user(id_str)
 
         if success:

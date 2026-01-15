@@ -89,12 +89,14 @@ class UserService(IUserService):
         Delete a user and all their associated data
         """
         try:
-            # Verify user exists
             user = self.repository.get_user_by_id(user_id)
             if user is None:
                 raise Exception("Utilisateur non trouvé")
 
-            # Delete user (cascade should handle playlists, reviews, etc.)
+            playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
+            for playlist in playlists:
+                self.playlist_repository.delete_playlist(playlist.id)
+
             success = self.repository.delete_user(user_id)
 
             if not success:
