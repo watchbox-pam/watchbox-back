@@ -83,3 +83,24 @@ class UserService(IUserService):
             return { "user_id": str(user_exists.id), "token": user_token, "username": user_exists.username }
         else:
             raise Exception("Mot de passe incorrect")
+
+    def delete_user(self, user_id: str) -> bool:
+        """
+        Delete a user and all their associated data
+        """
+        try:
+            # Verify user exists
+            user = self.repository.get_user_by_id(user_id)
+            if user is None:
+                raise Exception("Utilisateur non trouvé")
+
+            # Delete user (cascade should handle playlists, reviews, etc.)
+            success = self.repository.delete_user(user_id)
+
+            if not success:
+                raise Exception("La suppression de l'utilisateur a échoué")
+
+            return success
+
+        except Exception as e:
+            raise Exception(f"Erreur lors de la suppression: {str(e)}")

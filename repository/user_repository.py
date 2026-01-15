@@ -136,3 +136,23 @@ class UserRepository(IUserRepository):
             print(e)
 
         return user
+
+    def delete_user(self, user_id: str) -> bool:
+        """
+        Delete a user and all associated data from the database
+        """
+        success: bool = False
+
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    # Delete user (cascade will handle related data if configured)
+                    query = "DELETE FROM public.user WHERE id=%s;"
+                    cur.execute(query, (user_id,))
+
+                    success = cur.rowcount > 0
+
+        except Exception as e:
+            print(f"Error deleting user: {e}")
+
+        return success
