@@ -20,3 +20,6 @@ class IUserService(Protocol):
 
     def get_user_by_id(self, id: str) -> Optional[User]:
         ...
+
+    def delete_user(self, user_id: str) -> bool:
+        ...
