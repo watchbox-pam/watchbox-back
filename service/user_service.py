@@ -93,10 +93,6 @@ class UserService(IUserService):
             if user is None:
                 raise Exception("Utilisateur non trouvé")
 
-            playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
-            for playlist in playlists:
-                self.playlist_repository.delete_playlist(playlist.id)
-
             success = self.repository.delete_user(user_id)
 
             if not success:
