@@ -2,10 +2,11 @@ from typing import Protocol, Optional
 
 from domain.models.userSignup import UserSignup
 from domain.models.user import User
+from domain.models.userVerification import UserVerification
 
 
 class IUserRepository(Protocol):
-    def create_user(self, user: UserSignup, verification_token: str, password_reset_token: str) -> bool:
+    def create_user(self, user: UserSignup, password_reset_token: str, verification_code: str, verification_code_token: str) -> bool:
         ...
 
     def get_user_by_username(self, username: str) -> Optional[User]:
@@ -15,4 +16,10 @@ class IUserRepository(Protocol):
         ...
 
     def get_user_by_id(self, id: str) -> Optional[User]:
+        ...
+
+    def verify_user_by_code(self, user_verification: UserVerification) -> str:
+        ...
+
+    def update_verification_status(self, id: str) -> bool:
         ...

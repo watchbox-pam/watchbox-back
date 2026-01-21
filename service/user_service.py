@@ -1,4 +1,5 @@
 import os
+import random
 import re
 import uuid
 from dotenv import load_dotenv
@@ -12,6 +13,8 @@ from domain.interfaces.services.i_user_service import IUserService
 from domain.models.user import User
 from domain.models.userLogin import UserLogin
 from domain.models.userSignup import UserSignup
+from domain.models.userVerification import UserVerification
+from utils.mail_service import send_mail
 
 load_dotenv()
 
@@ -47,20 +50,29 @@ class UserService(IUserService):
         hashed_password = sha256((user.password + pepper).encode('utf-8'))
         user.password = hashed_password.hexdigest()
 
-        # Generate verification token
-        verification_token_uuid = uuid.uuid4()
-        hashed_verification_token = sha256(str(verification_token_uuid).encode('utf-8'))
-        verification_token = hashed_verification_token.hexdigest()
+        # Generate verification code
+        verification_code_int = random.randint(0, 999999)
+        verification_code = "%06d" % verification_code_int
+
+        # Generate verification code token
+        verification_code_token_uuid = uuid.uuid4()
+        hashed_verification_code_token = sha256(str(verification_code_token_uuid).encode('utf-8'))
+        verification_code_token = hashed_verification_code_token.hexdigest()
 
         # Generate password reset token
         password_reset_token_uuid = uuid.uuid4()
         hashed_password_reset_token = sha256(str(password_reset_token_uuid).encode('utf-8'))
         password_reset_token = hashed_password_reset_token.hexdigest()
 
-        if self.repository.create_user(user, verification_token, password_reset_token):
+        if self.repository.create_user(user, password_reset_token, verification_code, verification_code_token):
+            html = f"""\
+            <b>Bonjour, {user.username}</b><br/>
+            Votre code pour finaliser votre inscription à Watchbox est {verification_code}</a>
+            """
+            send_mail(user.email, "Vérification de votre compte Watchbox", html)
             self.playlist_repository.create_playlist_on_register(user_id=user.id)
             user_token = create_jwt_token({"user_id": str(user_id)})
-            return { "user_id": str(user_id), "token": user_token }
+            return { "user_id": str(user_id), "token": user_token, "verification_code_token": verification_code_token }
         else:
             raise Exception("La création de l'utilisateur a échoué")
 
@@ -90,6 +102,9 @@ class UserService(IUserService):
         if user_exists is None:
             raise Exception("Utilisateur non trouvé")
 
+        if not user_exists.is_verified:
+            raise Exception("Utilisateur non vérifié")
+
         salted_password = sha256((user.password + user_exists.salt).encode('utf-8')).hexdigest()
 
         pepper = os.getenv("PEPPER")
@@ -100,3 +115,14 @@ class UserService(IUserService):
             return { "user_id": str(user_exists.id), "token": user_token, "username": user_exists.username }
         else:
             raise Exception("Mot de passe incorrect")
+
+
+    def verify_user(self, user_verification: UserVerification) -> bool:
+
+        user_id: str = self.repository.verify_user_by_code(user_verification)
+
+        if user_id != "" :
+            update_verification_status = self.repository.update_verification_status(user_id)
+            return update_verification_status
+
+        return False

@@ -9,10 +9,9 @@ from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.userLogin import UserLogin
 from domain.models.userSignup import UserSignup
+from domain.models.userVerification import UserVerification
 from repository.playlist_repository import PlaylistRepository
 from repository.user_repository import UserRepository
-from domain.interfaces.services.i_playlist_service import IPlaylistService
-from service.playlist_service import PlaylistService
 from service.user_service import UserService
 
 user_router = APIRouter(prefix="/users", tags=["Users"])
@@ -76,5 +75,14 @@ async def get_user_by_id(id: str, service: IUserService = Depends(get_user_servi
             raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
     except HTTPException:
         raise
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.post("/verification")
+async def verify_user(user_verification: UserVerification, service: IUserService = Depends(get_user_service)):
+    try:
+        verification_valid = service.verify_user(user_verification)
+        return verification_valid
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))

@@ -63,8 +63,9 @@ def get_user_by_id(id: str) -> Optional[User]:
                         created_at=result[12],
                         salt=result[13],
                         is_verified=result[14],
-                        verification_token=result[15],
-                        password_reset_token=result[16],
+                        password_reset_token=result[15],
+                        verification_code=result[16],
+                        verification_code_token=result[17]
                     )
 
     except (Exception) as e:
