@@ -63,6 +63,7 @@ async def get_user_by_id(id: str, service: IUserService = Depends(get_user_servi
             return {
                 "id": user.id,
                 "username": user.username,
+                "email": user.email,
                 "country": user.country,
                 "profile_picture_path": user.profile_picture_path,
                 "banner_path": user.banner_path,
