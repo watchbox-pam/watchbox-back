@@ -235,7 +235,6 @@ def upgrade() -> None:
     sa.Column('banner_path', sa.String(length=256), nullable=True, comment="Chemin vers la bannière de l'utilisateur"),
     sa.ForeignKeyConstraint(['country'], ['country.iso'], name='user_country_fkey'),
     sa.PrimaryKeyConstraint('id', name='user_pkey'),
-    sa.UniqueConstraint('banner_path', name='user_banner_path_key'),
     sa.UniqueConstraint('email', name='user_email_key'),
     sa.UniqueConstraint('profile_picture_path', name='user_profile_picture_path_key'),
     sa.UniqueConstraint('username', name='user_username_key')
