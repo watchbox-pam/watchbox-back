@@ -236,7 +236,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['country'], ['country.iso'], name='user_country_fkey'),
     sa.PrimaryKeyConstraint('id', name='user_pkey'),
     sa.UniqueConstraint('email', name='user_email_key'),
-    sa.UniqueConstraint('profile_picture_path', name='user_profile_picture_path_key'),
     sa.UniqueConstraint('username', name='user_username_key')
     )
     op.create_table('friend',
