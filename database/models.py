@@ -332,9 +332,7 @@ class User(Base):
     __table_args__ = (
         ForeignKeyConstraint(['country'], ['country.iso'], name='user_country_fkey'),
         PrimaryKeyConstraint('id', name='user_pkey'),
-        UniqueConstraint('banner_path', name='user_banner_path_key'),
         UniqueConstraint('email', name='user_email_key'),
-        UniqueConstraint('profile_picture_path', name='user_profile_picture_path_key'),
         UniqueConstraint('username', name='user_username_key')
     )
 
