@@ -3,6 +3,7 @@ from typing import Protocol, Optional
 from domain.models.user import User
 from domain.models.userLogin import UserLogin
 from domain.models.userSignup import UserSignup
+from domain.models.userVerification import UserVerification
 
 
 class IUserService(Protocol):
@@ -19,6 +20,9 @@ class IUserService(Protocol):
         ...
 
     def get_user_by_id(self, id: str) -> Optional[User]:
+        ...
+
+    def verify_user(self, user: UserVerification) -> bool:
         ...
 
     def delete_user(self, user_id: str) -> bool:

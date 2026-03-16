@@ -5,10 +5,11 @@ import db_config
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.models.user import User
 from domain.models.userSignup import UserSignup
+from domain.models.userVerification import UserVerification
 
 
 class UserRepository(IUserRepository):
-    def create_user(self, user: UserSignup) -> bool:
+    def create_user(self, user: UserSignup, password_reset_token: str, verification_code: str, verification_code_token: str) -> bool:
 
         success: bool = False
 
@@ -18,16 +19,16 @@ class UserRepository(IUserRepository):
                 with conn.cursor() as cur:
 
                     query = ("INSERT INTO public.user"
-                             "(id, username, email, password, salt, birthdate, country, profile_picture_path, banner_path, is_private, history_private, adult_content, last_connection, created_at) "
-                             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);")
+                             "(id, username, email, password, salt, birthdate, country, profile_picture_path, banner_path, is_private, history_private, adult_content, last_connection, created_at, is_verified, password_reset_token, verification_code, verification_code_token) "
+                             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);")
 
-                    values = (user.id, user.username, user.email, user.password, user.salt, user.birthdate, user.country, "default.png", "default.png", False, False, False, datetime.datetime.now(), datetime.datetime.now())
+                    values = (user.id, user.username, user.email, user.password, user.salt, user.birthdate, user.country, "default.png", "default.png", False, False, False, datetime.datetime.now(), datetime.datetime.now(), False, password_reset_token, verification_code, verification_code_token)
 
                     cur.execute(query, values)
 
                     success = True
 
-        except (Exception) as e:
+        except Exception as e:
             print(e)
 
         return success
@@ -60,9 +61,13 @@ class UserRepository(IUserRepository):
                             last_connection=result[11],
                             created_at=result[12],
                             salt=result[13],
+                            is_verified=result[14],
+                            password_reset_token=result[15],
+                            verification_code=result[16],
+                            verification_code_token=result[17]
                         )
 
-        except (Exception) as e:
+        except Exception as e:
             print(e)
 
         return user
@@ -95,9 +100,13 @@ class UserRepository(IUserRepository):
                             last_connection=result[11],
                             created_at=result[12],
                             salt=result[13],
+                            is_verified=result[14],
+                            password_reset_token=result[15],
+                            verification_code=result[16],
+                            verification_code_token=result[17]
                         )
 
-        except (Exception) as e:
+        except Exception as e:
             print(e)
 
         return user
@@ -130,12 +139,53 @@ class UserRepository(IUserRepository):
                             last_connection=result[11],
                             created_at=result[12],
                             salt=result[13],
+                            is_verified=result[14],
+                            password_reset_token=result[15],
+                            verification_code=result[16],
+                            verification_code_token=result[17]
                         )
 
-        except (Exception) as e:
+        except Exception as e:
             print(e)
 
         return user
+
+
+    def verify_user_by_code(self, user_verification: UserVerification) -> str:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT id FROM public.user WHERE verification_code=%s AND verification_code_token=%s", (user_verification.code, user_verification.token,))
+
+                    result = cur.fetchone()
+
+                    if result is not None:
+                        return result[0]
+                    else:
+                        return ""
+
+        except (Exception) as e:
+            print(e)
+            return ""
+
+
+    def update_verification_status(self, id: str) -> bool:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+
+                    query = ("UPDATE public.user SET is_verified=%s WHERE id=%s")
+
+                    values = (True, id)
+
+                    cur.execute(query, values)
+
+                    return True
+
+        except Exception as e:
+            print(e)
+            return False
+
 
     def delete_user(self, user_id: str) -> bool:
         """
