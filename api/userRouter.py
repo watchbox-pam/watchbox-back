@@ -82,6 +82,8 @@ async def get_user_by_id(id: str, service: IUserService = Depends(get_user_servi
 @user_router.post("/verification")
 async def verify_user(user_verification: UserVerification, service: IUserService = Depends(get_user_service)):
     try:
+        if user_verification.code == "" or user_verification.token == "":
+            return False
         verification_valid = service.verify_user(user_verification)
         return verification_valid
     except Exception as error:
