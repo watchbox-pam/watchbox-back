@@ -46,7 +46,6 @@ def get_user_by_id(id: str) -> Optional[User]:
 
                 result = cur.fetchone()
 
-
                 if result is not None:
                     user = User(
                         id=result[0],
@@ -54,15 +53,19 @@ def get_user_by_id(id: str) -> Optional[User]:
                         email=result[2],
                         password=result[3],
                         birthdate=result[4],
-                        country=result[5],
-                        profile_picture_path=result[6],
-                        banner_path=result[7],
-                        is_private=result[8],
-                        history_private=result[9],
-                        adult_content=result[10],
-                        last_connection=result[11],
-                        created_at=result[12],
-                        salt=result[13],
+                        is_private=result[5],
+                        history_private=result[6],
+                        adult_content=result[7],
+                        last_connection=result[8],
+                        created_at=result[9],
+                        salt=result[10],
+                        country=result[11],
+                        profile_picture_path=result[12],
+                        banner_path=result[13],
+                        is_verified=result[14],
+                        password_reset_token=result[15],
+                        verification_code=result[16],
+                        verification_code_token=result[17]
                     )
 
     except (Exception) as e:
