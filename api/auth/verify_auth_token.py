@@ -42,7 +42,10 @@ def get_user_by_id(id: str) -> Optional[User]:
 
             with conn.cursor() as cur:
 
-                cur.execute("SELECT * FROM public.user WHERE id=%s;", (id,))
+                cur.execute("""SELECT id, username, email, password, birthdate, is_private, 
+                                   history_private, adult_content, last_connection, created_at,
+                                   salt, country, profile_picture_path, banner_path, is_verified,
+                                   password_reset_token, verification_code, verification_code_token FROM public.user WHERE id=%s;""", (id,))
 
                 result = cur.fetchone()
 
