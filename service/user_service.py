@@ -126,3 +126,23 @@ class UserService(IUserService):
             return update_verification_status
 
         return False
+
+
+    def delete_user(self, user_id: str) -> bool:
+        """
+        Delete a user and all their associated data
+        """
+        try:
+            user = self.repository.get_user_by_id(user_id)
+            if user is None:
+                raise Exception("Utilisateur non trouvé")
+
+            success = self.repository.delete_user(user_id)
+
+            if not success:
+                raise Exception("La suppression de l'utilisateur a échoué")
+
+            return success
+
+        except Exception as e:
+            raise Exception(f"Erreur lors de la suppression: {str(e)}")

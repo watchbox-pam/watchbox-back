@@ -62,6 +62,7 @@ async def get_user_by_id(id: str, service: IUserService = Depends(get_user_servi
             return {
                 "id": user.id,
                 "username": user.username,
+                "email": user.email,
                 "country": user.country,
                 "profile_picture_path": user.profile_picture_path,
                 "banner_path": user.banner_path,
@@ -88,3 +89,42 @@ async def verify_user(user_verification: UserVerification, service: IUserService
         return verification_valid
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.delete("/{id}")
+async def delete_user(
+    id: str,
+    user_id: str = Depends(check_jwt_token),
+    service: IUserService = Depends(get_user_service)
+):
+
+    try:
+        try:
+            uuid_obj = uuid.UUID(id)
+            id_str = str(uuid_obj)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Format d'ID utilisateur invalide"
+            )
+
+        success = service.delete_user(id_str)
+
+        if success:
+            return {
+                "message": "Compte supprimé avec succès",
+                "deleted_user_id": id_str
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="La suppression a échoué"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )

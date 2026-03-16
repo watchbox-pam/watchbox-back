@@ -23,3 +23,6 @@ class IUserRepository(Protocol):
 
     def update_verification_status(self, id: str) -> bool:
         ...
+
+    def delete_user(self, user_id: str) -> bool:
+        ...

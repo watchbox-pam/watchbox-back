@@ -20,3 +20,10 @@
 
 - lancer test : pytest -v
 
+
+## Alembic commands :
+- `alembic revision --autogenerate -m "message"` : pour créer une nouvelle migration
+- `alembic upgrade head` : pour appliquer les migrations à la base de données
+- `alembic downgrade -1` : pour annuler la dernière migration appliquée
+- `stamp head` : pour marquer la base de données comme étant à jour sans appliquer de migrations (utile pour les bases de données existantes)
+

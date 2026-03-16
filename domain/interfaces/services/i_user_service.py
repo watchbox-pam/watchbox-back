@@ -24,3 +24,6 @@ class IUserService(Protocol):
 
     def verify_user(self, user: UserVerification) -> bool:
         ...
+
+    def delete_user(self, user_id: str) -> bool:
+        ...
