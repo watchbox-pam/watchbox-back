@@ -352,6 +352,10 @@ class User(Base):
     country: Mapped[Optional[str]] = mapped_column(String)
     profile_picture_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers l'image de profil de l'utilisateur")
     banner_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers la bannière de l'utilisateur")
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
+    password_reset_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    verification_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    verification_code_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     country_: Mapped[Optional['Country']] = relationship('Country', back_populates='user')
     playlist: Mapped[list['Playlist']] = relationship('Playlist', back_populates='user')
