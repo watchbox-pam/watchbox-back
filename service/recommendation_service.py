@@ -1,5 +1,6 @@
-from typing import List
 import statistics
+import os
+from typing import List
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
@@ -7,149 +8,174 @@ from domain.interfaces.services.i_recommendation_service import IRecommendationS
 from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
 from domain.models.movieReview import MovieReview
+from service.ml_service import MLService
 
 
 class RecommendationService(IRecommendationService):
     def __init__(self, repository: IRecommendationRepository, playlist_repository: IPlaylistRepository):
         self.repository = repository
         self.playlist_repository = playlist_repository
+        self.ml: MLService | None = None
+        if os.path.exists("ml_model.pkl"):
+            try:
+                self.ml = MLService.load("ml_model.pkl")
+            except:
+                self.ml = None
 
+    def _get_adaptive_weights(self, user_id: str, rating_count: int) -> tuple:
+        if not self.ml or not self.ml.is_trained:
+            return (0.0, 0.0, 1.0)
+        user_known = user_id in self.ml.user_index
+        if not user_known or rating_count < 5:
+            return (0.05, 0.15, 0.80)
+        elif rating_count < 20:
+            return (0.30, 0.30, 0.40)
+        else:
+            return (0.45, 0.35, 0.20)
+
+    def _normalize(self, medias: List[MovieRecommendation]) -> dict:
+        if not medias:
+            return {}
+        weights = [m.weight for m in medias]
+        max_w, min_w = max(weights), min(weights)
+        if max_w == min_w:
+            return {m.id: 1.0 for m in medias}
+        return {m.id: (m.weight - min_w) / (max_w - min_w) for m in medias}
+
+    def _jaccard_similarity(self, set1: set, set2: set) -> float:
+        if not set1 or not set2:
+            return 0.0
+        intersection = len(set1 & set2)
+        union = len(set1 | set2)
+        return intersection / union if union > 0 else 0.0
+
+    def _diversify(self, medias: List[MovieRecommendation], top_n: int = 10, diversity_penalty: float = 0.3) -> List[MovieRecommendation]:
+        if not medias:
+            return []
+        features = {m.id: set(m.keywords) | set(m.genres) for m in medias}
+        selected = []
+        candidates = list(medias)
+        while len(selected) < top_n and candidates:
+            best = None
+            best_score = -1
+            for candidate in candidates:
+                score = candidate.weight
+                if selected:
+                    max_similarity = max(
+                        self._jaccard_similarity(features[candidate.id], features[s.id])
+                        for s in selected
+                    )
+                    score = score * (1 - diversity_penalty * max_similarity)
+                if score > best_score:
+                    best_score = score
+                    best = candidate
+            if best:
+                selected.append(best)
+                candidates.remove(best)
+        return selected
+
+    def _is_cold_start(self, user_id: str, watchlist_ids: list, history_ids: list, favorites_ids: list) -> bool:
+        no_ml = not self.ml or user_id not in self.ml.user_index
+        no_playlists = not watchlist_ids and not history_ids and not favorites_ids
+        return no_ml and no_playlists
+
+    def _get_cold_start_recommendations(self, emotion: Emotion) -> List[MovieRecommendation]:
+        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
+        for media in genre_medias:
+            media.weight = media.popularity
+        genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
+        return self._diversify(genre_medias[:50], top_n=10, diversity_penalty=0.6)
 
     def get_recommendations(self, emotion: Emotion, user_id: str):
-        # Fetching user main playlists : Watchlist, History and Favorites
         user_playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
-        user_watchlist_id: str = ""
-        user_history_id: str = ""
-        user_favorites_id: str = ""
-        playlist_ids_fetched: int = 0
+        user_watchlist_id = user_history_id = user_favorites_id = ""
+
         for item in user_playlists:
-            if playlist_ids_fetched == 3:
-                break
-            if item.title == "Watchlist":
-                user_watchlist_id = str(item.id)
-                playlist_ids_fetched += 1
-            if item.title == "Historique":
-                user_history_id = str(item.id)
-                playlist_ids_fetched += 1
-            if item.title == "Favoris":
-                user_favorites_id = str(item.id)
-                playlist_ids_fetched += 1
+            if item.title == "Watchlist":  user_watchlist_id = str(item.id)
+            if item.title == "Historique": user_history_id   = str(item.id)
+            if item.title == "Favoris":    user_favorites_id = str(item.id)
 
         user_watchlist = self.playlist_repository.get_playlist_medias(user_watchlist_id)
-        user_history = self.playlist_repository.get_playlist_medias(user_history_id)
+        user_history   = self.playlist_repository.get_playlist_medias(user_history_id)
         user_favorites = self.playlist_repository.get_playlist_medias(user_favorites_id)
 
-        user_has_watchlist_content: bool = len(user_watchlist) > 0
-        user_has_history_content: bool = len(user_history) > 0
-        user_has_favorites_content: bool = len(user_favorites) > 0
+        watchlist_ids = [m.movie_id for m in user_watchlist]
+        history_ids   = [m.movie_id for m in user_history]
+        favorites_ids = [m.movie_id for m in user_favorites]
 
-        watchlist_media_ids = []
-        if user_has_watchlist_content:
-            for media in user_watchlist:
-                watchlist_media_ids.append(media.movie_id)
+        if self._is_cold_start(user_id, watchlist_ids, history_ids, favorites_ids):
+            print(f"Cold start détecté pour user {user_id}")
+            return self._get_cold_start_recommendations(emotion)
 
-        history_media_ids = []
-        if user_has_history_content:
-            for media in user_history:
-                history_media_ids.append(media.movie_id)
+        keywords, actors, directors = [], [], []
 
-        favorites_media_ids = []
-        if user_has_favorites_content:
-            for media in user_favorites:
-                favorites_media_ids.append(media.movie_id)
+        if watchlist_ids:
+            for media in self.repository.find_by_ids_recommendation(watchlist_ids):
+                for kw in media.keywords:
+                    keywords.append({"value": kw, "weight": 10})
+                for c in media.credits:
+                    if c["job_id"] == "96":    actors.append({"value": c["person_id"], "weight": 10})
+                    elif c["job_id"] == "537": directors.append({"value": c["person_id"], "weight": 10})
 
-        # Fetching infos of playlists
-        if user_has_watchlist_content:
-            watchlist_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(watchlist_media_ids)
-        if user_has_history_content:
-            history_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(history_media_ids)
-        if user_has_favorites_content:
-            favorites_media_infos: List[MovieRecommendation] = self.repository.find_by_ids_recommendation(favorites_media_ids)
+        if history_ids:
+            history_reviews: List[MovieReview] = self.repository.find_with_review(user_id, history_ids)
+            for media in self.repository.find_by_ids_recommendation(history_ids):
+                ratings = [r.rating for r in history_reviews if r.movie_id == media.id]
+                w = (statistics.fmean(ratings) - 5) if ratings else 0
+                for kw in media.keywords:
+                    keywords.append({"value": kw, "weight": w})
+                for c in media.credits:
+                    if c["job_id"] == "96":    actors.append({"value": c["person_id"], "weight": w})
+                    elif c["job_id"] == "537": directors.append({"value": c["person_id"], "weight": w})
 
-        keywords = []
-        actors = []
-        directors = []
+        if favorites_ids:
+            for media in self.repository.find_by_ids_recommendation(favorites_ids):
+                for kw in media.keywords:
+                    keywords.append({"value": kw, "weight": 20})
+                for c in media.credits:
+                    if c["job_id"] == "96":    actors.append({"value": c["person_id"], "weight": 20})
+                    elif c["job_id"] == "537": directors.append({"value": c["person_id"], "weight": 20})
 
-        # Adding data from the watchlist medias
-        if user_has_watchlist_content:
-            for watchlist_media in watchlist_media_infos:
-                for keyword in watchlist_media.keywords:
-                    keywords.append({ "value": keyword, "weight": 10 })
-                for credit in watchlist_media.credits:
-                    if credit["job_id"] == "96": # Job id for actors
-                        actors.append({ "value": credit["person_id"], "weight": 10 })
-                    elif credit["job_id"] == "537": # Job id for movie directors
-                        directors.append({ "value": credit["person_id"], "weight": 10 })
-
-        # Adding data from the history medias
-        if user_has_history_content:
-            history_movie_reviews: List[MovieReview] = self.repository.find_with_review(user_id, history_media_ids)
-
-            for history_media in history_media_infos:
-                ratings: List[int] = []
-                for r in history_movie_reviews:
-                    if r.movie_id == history_media.id:
-                        ratings.append(r.rating)
-                media_weight = 0
-                if len(ratings) > 0:
-                    media_weight = statistics.fmean(ratings)
-                media_weight = media_weight - 5
-                for keyword in history_media.keywords:
-                    keywords.append({ "value": keyword, "weight": media_weight })
-                for credit in history_media.credits:
-                    if credit["job_id"] == "96":  # Job id for actors
-                        actors.append({ "value": credit["person_id"], "weight": media_weight })
-                    elif credit["job_id"] == "537":  # Job id for movie directors
-                        directors.append({ "value": credit["person_id"], "weight": media_weight })
-
-        # Adding data from the favorites medias
-        if user_has_favorites_content:
-            for favorites_media in favorites_media_infos:
-                for keyword in favorites_media.keywords:
-                    keywords.append({ "value": keyword, "weight": 20 })
-                for credit in favorites_media.credits:
-                    if credit["job_id"] == "96":  # Job id for actors
-                        actors.append({ "value": credit["person_id"], "weight": 20})
-                    elif credit["job_id"] == "537":  # Job id for movie directors
-                        directors.append({"value": credit["person_id"], "weight": 20})
-
-        # Getting medias matching selected emotion / genres
         genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
+        candidate_ids = [m.id for m in genre_medias]
 
-        user_has_any_content: bool = user_has_watchlist_content or user_has_history_content or user_has_favorites_content
         for media in genre_medias:
             media.weight = len(media.genres)
-            if user_has_any_content:
-                # Check if media is in the user watchlist
-                if media.id in watchlist_media_ids:
-                    media.weight += 10
-                # Add weight based on the watchlist keywords
-                for keyword in media.keywords:
-                    common_keywords = list(filter(lambda x: x["value"] == keyword, keywords))
-                    if common_keywords:
-                        for k in common_keywords:
-                            media.weight += k["weight"]
-                    #media.weight += keywords.count(keyword)
-                for credit in media.credits:
-                    # Add weight based on the watchlist actors
-                    if credit["job_id"] == "96":
-                        common_actors = list(filter(lambda x: x["value"] == credit["person_id"], actors))
-                        if common_actors:
-                            for a in common_actors:
-                                media.weight += a["weight"]
-                        #media.weight += actors.count(credit["person_id"])
-                    # Add weight based on the watchlist directors (more important)
-                    elif credit["job_id"] == "537":
-                        common_directors = list(filter(lambda x: x["value"] == credit["person_id"], directors))
-                        if common_directors:
-                            for d in common_directors:
-                                media.weight += d["weight"] * 2
-                        #media.weight += directors.count(credit["person_id"]) * 2
-                if media.id in history_media_ids:
-                    media.weight = 0
+            if media.id in history_ids:
+                media.weight = 0
+                continue
+            if media.id in watchlist_ids:
+                media.weight += 10
+            for kw in media.keywords:
+                for k in filter(lambda x: x["value"] == kw, keywords):
+                    media.weight += k["weight"]
+            for c in media.credits:
+                if c["job_id"] == "96":
+                    for a in filter(lambda x: x["value"] == c["person_id"], actors):
+                        media.weight += a["weight"]
+                elif c["job_id"] == "537":
+                    for d in filter(lambda x: x["value"] == c["person_id"], directors):
+                        media.weight += d["weight"] * 2
 
-        # Sorting media by descending popularity and weight
+        rating_count = len(history_ids)
+        w_svd, w_als, w_content = self._get_adaptive_weights(user_id, rating_count)
+
+        content_scores = self._normalize(genre_medias)
+        svd_scores = {}
+        als_scores = {}
+
+        if self.ml and self.ml.is_trained:
+            svd_scores = {mid: self.ml.predict_svd(user_id, mid) for mid in candidate_ids}
+            als_scores = self.ml.predict_als(user_id, candidate_ids)
+
+        for media in genre_medias:
+            media.weight = (
+                svd_scores.get(media.id, 0.0)     * w_svd +
+                als_scores.get(media.id, 0.0)     * w_als +
+                content_scores.get(media.id, 0.0) * w_content
+            )
+
         genre_medias = sorted(genre_medias, key=lambda x: x.popularity, reverse=True)
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
 
-        return genre_medias[:10]
+        return self._diversify(genre_medias[:30], top_n=10, diversity_penalty=0.3)
