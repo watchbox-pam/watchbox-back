@@ -165,17 +165,15 @@ class UserRepository(IUserRepository):
 
 
     def update_verification_status(self, id: str) -> bool:
-        try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-
-                    query = ("UPDATE public.user SET is_verified=%s WHERE id=%s")
-
-                    values = (True, id)
-
-                    cur.execute(query, values)
-
+        try:    
+            with SessionLocal() as session:
+                user = session.query(User2).filter(User2.id == id).first()
+                if user is not None:
+                    user.is_verified = True
+                    session.commit()
                     return True
+                else:
+                    return False
 
         except Exception as e:
             print(e)
@@ -189,13 +187,14 @@ class UserRepository(IUserRepository):
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    # Delete user (cascade will handle related data if configured)
-                    query = "DELETE FROM public.user WHERE id=%s;"
-                    cur.execute(query, (user_id,))
-
-                    success = cur.rowcount > 0
+            with SessionLocal() as session:
+                user = session.query(User2).filter(User2.id == user_id).first()
+                if user is not None:
+                    session.delete(user)
+                    session.commit()
+                    success = True
+                else:
+                    success = False
 
         except Exception as e:
             print(f"Error deleting user: {e}")
