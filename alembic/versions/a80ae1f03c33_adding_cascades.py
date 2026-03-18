@@ -30,7 +30,25 @@ def upgrade() -> None:
         ondelete='CASCADE'
     )
 
-    
+    op.drop_constraint('playlist_media_playlist_id_fkey', 'playlist_media', type_='foreignkey')
+    op.create_foreign_key(
+        'playlist_media_playlist_id_fkey',
+        'playlist_media',
+        'playlist',
+        ['playlist_id'],
+        ['id'],
+        ondelete='CASCADE'
+    )
+
+    op.drop_constraint('comment_user_id_fkey', 'review', type_='foreignkey')
+    op.create_foreign_key(
+        'comment_user_id_fkey',
+        'review',
+        'user',
+        ['user_id'],
+        ['id'],
+        ondelete='CASCADE'
+    )
     # ### end Alembic commands ###
 
 
@@ -40,6 +58,24 @@ def downgrade() -> None:
     op.create_foreign_key(
         'playlist_user_id_fkey',
         'playlist',
+        'user',
+        ['user_id'],
+        ['id']
+    )
+
+    op.drop_constraint('playlist_media_playlist_id_fkey', 'playlist_media', type_='foreignkey')
+    op.create_foreign_key(
+        'playlist_media_playlist_id_fkey',
+        'playlist_media',
+        'playlist',
+        ['playlist_id'],
+        ['id']
+    )
+
+    op.drop_constraint('comment_user_id_fkey', 'review', type_='foreignkey')
+    op.create_foreign_key(
+        'comment_user_id_fkey',
+        'review',
         'user',
         ['user_id'],
         ['id']

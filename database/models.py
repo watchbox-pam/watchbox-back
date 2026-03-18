@@ -442,7 +442,7 @@ t_playlist_media = Table(
     Column('tv_id', Integer),
     Column('add_date', DateTime, server_default=text('now()')),
     ForeignKeyConstraint(['movie_id'], ['movie.id'], name='playlist_media_movie_id_fkey'),
-    ForeignKeyConstraint(['playlist_id'], ['playlist.id'], name='playlist_media_playlist_id_fkey'),
+    ForeignKeyConstraint(['playlist_id'], ['playlist.id'], name='playlist_media_playlist_id_fkey', ondelete='CASCADE'),
     ForeignKeyConstraint(['tv_id'], ['tv.id'], name='playlist_media_tv_id_fkey')
 )
 
@@ -461,5 +461,5 @@ t_review = Table(
     ForeignKeyConstraint(['movie_id'], ['movie.id'], name='comment_movie_id_fkey'),
     ForeignKeyConstraint(['tv_episode_id'], ['tv_episode.id'], name='comment_tv_episode_id_fkey'),
     ForeignKeyConstraint(['tv_id'], ['tv.id'], name='comment_tv_id_fkey'),
-    ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey')
+    ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey', ondelete='CASCADE'),
 )
