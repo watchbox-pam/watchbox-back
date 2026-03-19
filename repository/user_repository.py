@@ -3,9 +3,8 @@ from typing import Optional
 
 import db_config
 from database.db import SessionLocal
-from database.models import User as User2
+from database.models import User
 from domain.interfaces.repositories.i_user_repository import IUserRepository
-from domain.models.user import User
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
 
@@ -17,7 +16,7 @@ class UserRepository(IUserRepository):
 
         try:
             with SessionLocal() as session:
-                new_user = User2(
+                new_user = User(
                     id=user.id,
                     username=user.username,
                     email=user.email,
@@ -53,7 +52,7 @@ class UserRepository(IUserRepository):
         user: Optional[User] = None
         try:
             with SessionLocal() as session:
-                result = session.query(User2).filter(User2.username == username).first()
+                result = session.query(User).filter(User.username == username).first()
 
                 if result is not None:
                     user = User(
@@ -86,7 +85,7 @@ class UserRepository(IUserRepository):
         user: Optional[User] = None
         try:
             with SessionLocal() as session:
-                result = session.query(User2).filter(User2.email == email).first()
+                result = session.query(User).filter(User.email == email).first()
 
                 if result is not None:
                     user = User(
@@ -120,7 +119,7 @@ class UserRepository(IUserRepository):
         user: Optional[User] = None
         try:
             with SessionLocal() as session:
-                result = session.query(User2).filter(User2.id == id).first()
+                result = session.query(User).filter(User.id == id).first()
 
                 if result is not None:
                     user = User(
@@ -153,7 +152,7 @@ class UserRepository(IUserRepository):
     def verify_user_by_code(self, user_verification: UserVerification) -> str:
         try:           
             with SessionLocal() as session:
-                result = session.query(User2).filter(User2.verification_code == user_verification.code, User2.verification_code_token == user_verification.token).first()
+                result = session.query(User).filter(User.verification_code == user_verification.code, User.verification_code_token == user_verification.token).first()
                 if result is not None:
                     return result.id
                 else:
@@ -167,7 +166,7 @@ class UserRepository(IUserRepository):
     def update_verification_status(self, id: str) -> bool:
         try:    
             with SessionLocal() as session:
-                user = session.query(User2).filter(User2.id == id).first()
+                user = session.query(User).filter(User.id == id).first()
                 if user is not None:
                     user.is_verified = True
                     session.commit()
@@ -188,7 +187,7 @@ class UserRepository(IUserRepository):
 
         try:
             with SessionLocal() as session:
-                user = session.query(User2).filter(User2.id == user_id).first()
+                user = session.query(User).filter(User.id == user_id).first()
                 if user is not None:
                     session.delete(user)
                     session.commit()
