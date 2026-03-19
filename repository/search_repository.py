@@ -36,7 +36,9 @@ class SearchRepository(ISearchRepository):
                         "title": item.get("title", ""),
                         "poster_path": item.get("poster_path"),
                         "release_date": item.get("release_date", ""),
-                        "media_type": "movie"
+                        "media_type": "movie",
+                        "original_title": item.get("original_title", ""),
+                        "popularity": item.get("popularity", 0),
                     })
                 elif media_type == "person":
                     people.append({
@@ -44,7 +46,8 @@ class SearchRepository(ISearchRepository):
                         "name": item.get("name", ""),
                         "profile_path": item.get("profile_path"),
                         "known_for_department": item.get("known_for_department", ""),
-                        "media_type": "person"
+                        "media_type": "person",
+                        "popularity": item.get("popularity", 0),
                     })
                 elif media_type == "tv":
                     tv.append({
@@ -52,8 +55,13 @@ class SearchRepository(ISearchRepository):
                         "title": item.get("name", ""),
                         "poster_path": item.get("poster_path"),
                         "first_air_date": item.get("first_air_date", ""),
-                        "media_type": "tv"
+                        "media_type": "tv",
+                        "popularity": item.get("popularity", 0),
                     })
+
+        movies.sort(key=lambda x: x['popularity'], reverse=True)
+        people.sort(key=lambda x: x['popularity'], reverse=True)
+        tv.sort(key=lambda x: x['popularity'], reverse=True)
 
         return {
             "movies": movies,
@@ -87,8 +95,12 @@ class SearchRepository(ISearchRepository):
                     "release_date": item.get("release_date", ""),
                     "overview": item.get("overview", ""),
                     "vote_average": item.get("vote_average", 0),
-                    "media_type": "movie"
+                    "media_type": "movie",
+                    "original_title": item.get("original_title", ""),
+                    "popularity": item.get("popularity", 0),
                 })
+
+        movies.sort(key=lambda x: x['popularity'], reverse=True)
 
         return movies
 
@@ -107,7 +119,8 @@ class SearchRepository(ISearchRepository):
                     "name": item.get("name", ""),
                     "profile_path": item.get("profile_path"),
                     "known_for_department": item.get("known_for_department", ""),
-                    "media_type": "person"
+                    "media_type": "person",
+                    "popularity": item.get("popularity", 0),
                 }
 
                 # Include known_for movies/shows
@@ -123,6 +136,8 @@ class SearchRepository(ISearchRepository):
 
                 person["known_for"] = known_for
                 people.append(person)
+
+        people.sort(key=lambda x: x['popularity'], reverse=True)
 
         return people
 
