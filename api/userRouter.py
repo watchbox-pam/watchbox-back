@@ -8,6 +8,7 @@ from api.auth.verify_auth_token import check_jwt_token
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.userLogin import UserLogin
+from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
 from repository.playlist_repository import PlaylistRepository
@@ -128,3 +129,21 @@ async def delete_user(
             status_code=400,
             detail=str(error)
         )
+
+
+@user_router.post("/forgot-password")
+async def forgot_password(email: str, service: IUserService = Depends(get_user_service)):
+    try:
+        result = service.send_password_reset_email(email)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.post("/reset-password")
+async def reset_password(new_password: UserPassword, service: IUserService = Depends(get_user_service)):
+    try:
+        result = service.reset_user_password(new_password)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))

@@ -4,6 +4,7 @@ from typing import Optional
 import db_config
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.models.user import User
+from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
 
@@ -215,3 +216,39 @@ class UserRepository(IUserRepository):
             print(f"Error deleting user: {e}")
 
         return success
+
+
+    def check_password_reset_token(self, password_reset_token: str) -> str:
+        user_id: Optional[str] = None
+        try:
+            with db_config.connect_to_db() as conn:
+
+                with conn.cursor() as cur:
+                    cur.execute("""SELECT id FROM public.user WHERE password_reset_token=%s;""",
+                                (password_reset_token,))
+
+                    result = cur.fetchone()
+
+                    if result is not None:
+                        user_id = result[0]
+
+        except Exception as e:
+            print(e)
+
+        return user_id
+
+    def update_user_password(self, new_password: UserPassword) -> bool:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    query = ("UPDATE public.user SET is_verified=%s WHERE id=%s")
+
+                    values = (True, id)
+
+                    cur.execute(query, values)
+
+                    return True
+
+        except Exception as e:
+            print(e)
+            return False
