@@ -1,20 +1,20 @@
 import db_config
 from domain.interfaces.repositories.i_country_repository import ICountryRepository
-from domain.models.country import Country
-
+from domain.models.country import Country as CountryList
+from database.db import SessionLocal
+from database.models import Country
 
 class CountryRepository(ICountryRepository):
-    def find_all_countries(self) -> list[Country]:
+    def find_all_countries(self) -> list[CountryList]:
+        try:
+            countries: list[CountryList] = []
+            with SessionLocal() as session:
+                result = session.query(Country).filter(Country.exists == True).all()
 
-        countries: list[Country] = []
-
-        with db_config.connect_to_db() as conn:
-            with conn.cursor() as cur:
-                query = "SELECT * FROM public.country WHERE exists=true;"
-
-                cur.execute(query)
-                result = cur.fetchall()
                 for res in result:
-                    countries.append(Country(iso=res[0], name=res[1]))
+                    countries.append(CountryList(iso=res.iso, name=res.name))
+
+        except Exception as e:
+            print(e)
 
         return countries
