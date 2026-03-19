@@ -8,7 +8,6 @@ from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
 
-
 class UserRepository(IUserRepository):
     def create_user(self, user: UserSignup, password_reset_token: str, verification_code: str, verification_code_token: str) -> bool:
 
@@ -73,7 +72,9 @@ class UserRepository(IUserRepository):
                         is_verified=result.is_verified,
                         password_reset_token=result.password_reset_token,
                         verification_code=result.verification_code,
-                        verification_code_token=result.verification_code_token
+                        verification_code_token=result.verification_code_token,
+                        country_=result.country_,
+                        playlist=result.playlist
                     )
         except Exception as e:
             print(e)
@@ -106,7 +107,9 @@ class UserRepository(IUserRepository):
                         is_verified=result.is_verified,
                         password_reset_token=result.password_reset_token,
                         verification_code=result.verification_code,
-                        verification_code_token=result.verification_code_token
+                        verification_code_token=result.verification_code_token,
+                        country_=result.country_,
+                        playlist=result.playlist
                     )
 
         except Exception as e:
@@ -140,7 +143,9 @@ class UserRepository(IUserRepository):
                         is_verified=result.is_verified,
                         password_reset_token=result.password_reset_token,
                         verification_code=result.verification_code,
-                        verification_code_token=result.verification_code_token
+                        verification_code_token=result.verification_code_token,
+                        country_=result.country_,
+                        playlist=result.playlist
                     )
 
         except Exception as e:
