@@ -38,6 +38,7 @@ class SearchRepository(ISearchRepository):
                         "release_date": item.get("release_date", ""),
                         "media_type": "movie",
                         "original_title": item.get("original_title", ""),
+                        "popularity": item.get("popularity", 0),
                     })
                 elif media_type == "person":
                     people.append({
