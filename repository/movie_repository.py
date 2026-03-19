@@ -2,11 +2,13 @@ from typing import Optional, List
 
 import db_config
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
-from domain.models.movie import Movie, PopularMovieList, MovieDetail
+from domain.models.movie import PopularMovieList, MovieDetail
 from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
-
+from database.db import SessionLocal
+from database.models import Movie
+from sqlalchemy import func
 
 class MovieRepository(IMovieRepository):
     def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
@@ -94,13 +96,10 @@ class MovieRepository(IMovieRepository):
 
     def movie_runtime(self, movie_ids: List[int]) -> int:
         try:
-            print(f"[DEBUG] Calcul du runtime pour les IDs : {movie_ids}")
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT SUM(runtime) FROM public.movie WHERE id = ANY(%s);", (movie_ids,))
-                    result = cur.fetchone()
-                    print(f"[DEBUG] Résultat SQL : {result}")
-                    return result[0] if result and result[0] else 0
+            with SessionLocal() as session:
+                movies = session.query(Movie).filter(Movie.id.in_(movie_ids))
+                total_runtime = sum(movie.runtime for movie in movies)
+                return total_runtime
         except Exception as e:
             print(f"[ERREUR] Exception dans movie_runtime : {e}")
             return 0
@@ -110,23 +109,14 @@ class MovieRepository(IMovieRepository):
         movies: List[Movie] = []
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = """
-                        SELECT id, title, poster_path FROM public.movie 
-                        WHERE popularity >= 70
-                        ORDER BY RANDOM() 
-                        LIMIT %s;
-                    """
-                    cur.execute(query, (count,))
-                    results = cur.fetchall()
-
-                    for result in results:
-                        movies.append(MovieListItem(
-                            id=result[0],
-                            title=result[1],
-                            poster_path=result[2]
-                        ))
+            with SessionLocal() as session:
+                results = session.query(Movie).order_by(func.random()).filter(Movie.popularity >= 70).limit(count).all()
+                for result in results:
+                    movies.append(MovieListItem(
+                        id=result.id,
+                        title=result.title,
+                        poster_path=result.poster_path
+                    ))
 
         except Exception as e:
             print(e)
