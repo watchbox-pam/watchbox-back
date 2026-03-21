@@ -7,23 +7,32 @@ from domain.interfaces.repositories.i_playlist_repository import IPlaylistReposi
 from domain.models.playlist import Playlist
 from domain.models.movie import MediaItem
 from domain.models.playlist_media import PlaylistMedia
-
+from database.db import SessionLocal
+from database.models import Playlist as PlaylistModel
+from database.models import User
+from database.models import t_playlist_media
+from database.models import Movie as MovieModel
+from sqlalchemy import select, insert, delete
 
 class PlaylistRepository(IPlaylistRepository):
     def create_playlist(self, playlist: Playlist) -> bool:
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = ("INSERT INTO public.playlist "
-                             "(id, user_id, title, created_at, is_private) "
-                             "VALUES (%s, %s, %s, %s, %s);")
+            with SessionLocal() as session:
+                user = session.query(User).filter(User.id == playlist.user_id).first()
 
-                    values = (playlist.id, playlist.user_id, playlist.title, datetime.datetime.now(datetime.UTC), playlist.is_private)
-
-                    cur.execute(query, values)
-                    success = True
+                new_playlist = PlaylistModel(
+                    id=playlist.id,
+                    user_id=playlist.user_id,
+                    title=playlist.title,
+                    created_at=datetime.datetime.now(datetime.UTC),
+                    is_private=playlist.is_private,
+                    user=user
+                )
+                session.add(new_playlist)
+                session.commit()
+                success = True
 
         except Exception as e:
             print(e)
@@ -64,15 +73,12 @@ class PlaylistRepository(IPlaylistRepository):
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    delete_media_query = "DELETE FROM public.playlist_media WHERE playlist_id=%s;"
-                    cur.execute(delete_media_query, (playlist_id,))
-
-                with conn.cursor() as cur:
-                    query = "DELETE FROM public.playlist WHERE id=%s;"
-                    cur.execute(query, (playlist_id,))
-                    success = cur.rowcount > 0
+            with SessionLocal() as session:
+                playlist = session.query(PlaylistModel).filter(PlaylistModel.id == playlist_id).first()
+                if playlist:
+                    session.delete(playlist)
+                    session.commit()
+                    success = True
 
         except Exception as e:
             print(e)
@@ -83,29 +89,19 @@ class PlaylistRepository(IPlaylistRepository):
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    # Récupérer les valeurs actuelles
-                    cur.execute("SELECT title, is_private FROM public.playlist WHERE id=%s;", (playlist_id,))
-                    result = cur.fetchone()
+            with SessionLocal() as session:
+                playlist = session.query(PlaylistModel).filter(PlaylistModel.id == playlist_id).first()
+                
+                if playlist is None:
+                    return False
 
-                    if result is None:
-                        print(f"Playlist avec ID {playlist_id} introuvable.")
-                        return False
+                if title is not None:
+                    playlist.title = title
+                if is_private is not None:
+                    playlist.is_private = is_private
 
-                    current_title, current_is_private = result
-
-                    # Utiliser les valeurs actuelles si aucun nouveau paramètre n'est fourni
-                    title = title if title is not None else current_title
-                    is_private = is_private if is_private is not None else current_is_private
-
-                    # Construire et exécuter la requête de mise à jour
-                    query = "UPDATE public.playlist SET title=%s, is_private=%s WHERE id=%s;"
-                    cur.execute(query, (title, is_private, playlist_id))
-                    success = cur.rowcount > 0
-
-                    if not success:
-                        print(f"Aucune ligne mise à jour pour la playlist ID {playlist_id}.")
+                session.commit()
+                success = True
 
         except Exception as e:
             print(f"Erreur lors de la mise à jour de la playlist : {e}")
@@ -116,19 +112,17 @@ class PlaylistRepository(IPlaylistRepository):
         playlist: Optional[Playlist] = None
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT * FROM public.playlist WHERE id=%s;", (playlist_id,))
-                    result = cur.fetchone()
+            with SessionLocal() as session:
+                result = session.query(PlaylistModel).filter(PlaylistModel.id == playlist_id).first()
 
-                    if result is not None:
-                        playlist = Playlist(
-                            id=str(result[0]),
-                            user_id=str(result[1]),
-                            title=result[2],
-                            is_private=result[3],
-                            created_at=result[4],
-                        )
+                if result is not None:
+                    playlist = Playlist(
+                        id=str(result.id),
+                        user_id=str(result.user_id),
+                        title=result.title,
+                        is_private=result.is_private,
+                        created_at=result.created_at,
+                    )
 
         except Exception as e:
             print(e)
@@ -138,20 +132,19 @@ class PlaylistRepository(IPlaylistRepository):
     def get_playlist_medias(self, playlist_id: str) -> Optional[List[Playlist]]:
         medias = []
 
-        try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT * FROM public.playlist_media WHERE playlist_id=%s;", (playlist_id,))
-                    results = cur.fetchall()
+        try:            
+            with SessionLocal() as session:
+                results = session.execute(
+                    select(t_playlist_media).where(t_playlist_media.c.playlist_id == playlist_id)
+                ).fetchall()
 
-                    if results is not None:
-                        for result in results:
-                            medias.append(PlaylistMedia(
-                                playlist_id=result[0],
-                                movie_id=result[1],
-                                tv_id=result[2],
-                                add_date=result[3],
-                            ))
+                for result in results:
+                    medias.append(PlaylistMedia(
+                        playlist_id=result.playlist_id,
+                        movie_id=result.movie_id,
+                        tv_id=result.tv_id,
+                        add_date=result.add_date,
+                    ))  
 
         except Exception as e:
             print(e)
@@ -162,19 +155,17 @@ class PlaylistRepository(IPlaylistRepository):
         playlists: List[Playlist] = []
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT * FROM public.playlist WHERE user_id=%s;", (user_id,))
-                    results = cur.fetchall()
+            with SessionLocal() as session:
+                results = session.query(PlaylistModel).filter(PlaylistModel.user_id == user_id).all()
 
-                    for result in results:
-                        playlists.append(Playlist(
-                            id=str(result[0]),
-                            user_id=str(result[1]),
-                            title=result[2],
-                            is_private=result[3],
-                            created_at=result[4],
-                        ))
+                for result in results:
+                    playlists.append(Playlist(
+                        id=str(result.id),
+                        user_id=str(result.user_id),
+                        title=result.title,
+                        created_at=result.created_at,
+                        is_private=result.is_private
+                    ))
 
         except Exception as e:
             print(e)
@@ -185,13 +176,16 @@ class PlaylistRepository(IPlaylistRepository):
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-
-                    query = "INSERT INTO public.playlist_media (playlist_id, movie_id, add_date) VALUES (%s, %s, %s);"
-                    add_date = datetime.datetime.now()
-                    cur.execute(query, (playlist_id, media_id, add_date))
-                    success = True
+            with SessionLocal() as session:
+                session.execute(
+                    insert(t_playlist_media).values(
+                        playlist_id=playlist_id,
+                        movie_id=media_id,
+                        add_date=datetime.datetime.now()
+                    )
+                )
+                session.commit()
+                success = True
 
         except Exception as e:
             print(e)
@@ -199,17 +193,15 @@ class PlaylistRepository(IPlaylistRepository):
         return success
 
     def media_exists_in_playlist(self, playlist_id: str, media_id: int) -> bool:
-        try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = """
-                            SELECT 1
-                            FROM public.playlist_media
-                            WHERE playlist_id = %s \
-                              AND movie_id = %s; \
-                            """
-                    cur.execute(query, (playlist_id, media_id))
-                    return cur.fetchone() is not None
+        try:            
+            with SessionLocal() as session:
+                result = session.execute(
+                    select(t_playlist_media).where(
+                        (t_playlist_media.c.playlist_id == playlist_id) &
+                        (t_playlist_media.c.movie_id == media_id)
+                    )
+                ).fetchone()
+                return result is not None
         except Exception as e:
             return False
 
@@ -217,22 +209,26 @@ class PlaylistRepository(IPlaylistRepository):
         media_data: list[MediaItem] = []
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = """
-                        SELECT m.id, m.poster_path
-                        FROM public.playlist_media pm
-                        JOIN public.movie m ON pm.movie_id = m.id
-                        WHERE pm.playlist_id = %s;
-                    """
-                    cur.execute(query, (playlist_id,))
-                    results = cur.fetchall()
+            with SessionLocal() as session:                
 
-                    for result in results:
-                        media_data.append(MediaItem(
-                            id=result[0],
-                            image=result[1]
-                        ))
+                results = session.execute(
+                    select(
+                        MovieModel.id,
+                        MovieModel.poster_path
+                ).select_from(
+                        t_playlist_media.join(
+                            MovieModel, t_playlist_media.c.movie_id == MovieModel.id
+                        ).join(
+                            PlaylistModel, t_playlist_media.c.playlist_id == PlaylistModel.id
+                        )
+                    ).where(PlaylistModel.id == playlist_id)
+                ).fetchall()
+
+                for result in results:
+                    media_data.append(MediaItem(
+                        id=result.id,
+                        image=result.poster_path
+                    ))
 
         except Exception as e:
             print(e)
@@ -243,11 +239,15 @@ class PlaylistRepository(IPlaylistRepository):
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = "DELETE FROM public.playlist_media WHERE playlist_id=%s AND movie_id=%s;"
-                    cur.execute(query, (playlist_id, media_id))
-                    success = cur.rowcount > 0
+            with SessionLocal() as session:
+                result = session.execute(
+                    delete(t_playlist_media).where(
+                        (t_playlist_media.c.playlist_id == playlist_id) &
+                        (t_playlist_media.c.movie_id == media_id)
+                    )
+                )
+                session.commit()
+                success = result.rowcount > 0
 
         except Exception as e:
             print(e)
