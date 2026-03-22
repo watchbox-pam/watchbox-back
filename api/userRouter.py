@@ -4,14 +4,14 @@ from starlette.exceptions import HTTPException
 from typing import cast
 import uuid
 
+from api.auth.verify_auth_token import check_jwt_token
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.userLogin import UserLogin
 from domain.models.userSignup import UserSignup
+from domain.models.userVerification import UserVerification
 from repository.playlist_repository import PlaylistRepository
 from repository.user_repository import UserRepository
-from domain.interfaces.services.i_playlist_service import IPlaylistService
-from service.playlist_service import PlaylistService
 from service.user_service import UserService
 
 user_router = APIRouter(prefix="/users", tags=["Users"])
@@ -47,7 +47,7 @@ async def login_user(user: UserLogin, service: IUserService = Depends(get_user_s
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@user_router.get("/{id}")
+@user_router.get("/{id}", dependencies=[Depends(check_jwt_token)])
 async def get_user_by_id(id: str, service: IUserService = Depends(get_user_service)):
     try:
         # Validate UUID format
@@ -62,6 +62,7 @@ async def get_user_by_id(id: str, service: IUserService = Depends(get_user_servi
             return {
                 "id": user.id,
                 "username": user.username,
+                "email": user.email,
                 "country": user.country,
                 "profile_picture_path": user.profile_picture_path,
                 "banner_path": user.banner_path,
@@ -77,3 +78,53 @@ async def get_user_by_id(id: str, service: IUserService = Depends(get_user_servi
         raise
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.post("/verification")
+async def verify_user(user_verification: UserVerification, service: IUserService = Depends(get_user_service)):
+    try:
+        if user_verification.code == "" or user_verification.token == "":
+            return False
+        verification_valid = service.verify_user(user_verification)
+        return verification_valid
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.delete("/{id}")
+async def delete_user(
+    id: str,
+    user_id: str = Depends(check_jwt_token),
+    service: IUserService = Depends(get_user_service)
+):
+
+    try:
+        try:
+            uuid_obj = uuid.UUID(id)
+            id_str = str(uuid_obj)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Format d'ID utilisateur invalide"
+            )
+
+        success = service.delete_user(id_str)
+
+        if success:
+            return {
+                "message": "Compte supprimé avec succès",
+                "deleted_user_id": id_str
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="La suppression a échoué"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )

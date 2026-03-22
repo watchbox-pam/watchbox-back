@@ -4,7 +4,7 @@
 
 - Installer Python 3.13 : `brew install python@3.13`
 
-- Créer le virtual env `python -m venv /path/to/new/virtual/environment`
+- Créer le virtual env `python -m venv /path/to/new/virtual/environment` ou bien `python3 -m venv .venv`
 
 - Activer le venv `source .venv/bin/activate` pour Mac / Linux ou `.venv\Scripts\activate` pour Windows
 
@@ -19,3 +19,11 @@
 - Installer pytest : `pip install -e .`
 
 - lancer test : pytest -v
+
+
+## Alembic commands :
+- `alembic revision --autogenerate -m "message"` : pour créer une nouvelle migration
+- `alembic upgrade head` : pour appliquer les migrations à la base de données
+- `alembic downgrade -1` : pour annuler la dernière migration appliquée
+- `stamp head` : pour marquer la base de données comme étant à jour sans appliquer de migrations (utile pour les bases de données existantes)
+
