@@ -37,19 +37,20 @@ class MovieRepository(IMovieRepository):
         return movie
 
 
-    def search(self, search_term: str) -> Optional[list[DBMovie]]:
+    def search(self, search_term: str) -> Optional[list[MovieDetail]]:
         endpoint = f"/search/movie?query={search_term}&include_adult=false&language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
-        movies: list[DBMovie] = []
+        movies: list[MovieDetail] = []
 
         for res in result["results"]:
-            movies.append(DBMovie(
+            movies.append(MovieDetail(
                 id=res["id"],
                 adult=res["adult"],
                 backdrop_path=res["backdrop_path"],
                 budget=0,
+                genres=[],
                 original_language=res["original_language"],
                 original_title=res["original_title"],
                 overview=res["overview"],
