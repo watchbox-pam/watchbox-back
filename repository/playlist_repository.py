@@ -2,16 +2,15 @@ import datetime
 from typing import Optional, List
 import uuid
 
-import db_config
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.playlist import Playlist
 from domain.models.movie import MediaItem
 from domain.models.playlist_media import PlaylistMedia
 from database.db import SessionLocal
-from database.models import Playlist as PlaylistModel
-from database.models import User
+from database.models import Playlist as DBPlaylist
+from database.models import User as DBUser
 from database.models import t_playlist_media
-from database.models import Movie as MovieModel
+from database.models import Movie as DBMovie
 from sqlalchemy import select, insert, delete
 
 class PlaylistRepository(IPlaylistRepository):
@@ -20,9 +19,9 @@ class PlaylistRepository(IPlaylistRepository):
 
         try:
             with SessionLocal() as session:
-                user = session.query(User).filter(User.id == playlist.user_id).first()
+                user = session.query(DBUser).filter(DBUser.id == playlist.user_id).first()
 
-                new_playlist = PlaylistModel(
+                new_playlist = DBPlaylist(
                     id=playlist.id,
                     user_id=playlist.user_id,
                     title=playlist.title,
@@ -74,7 +73,7 @@ class PlaylistRepository(IPlaylistRepository):
 
         try:
             with SessionLocal() as session:
-                playlist = session.query(PlaylistModel).filter(PlaylistModel.id == playlist_id).first()
+                playlist = session.query(DBPlaylist).filter(DBPlaylist.id == playlist_id).first()
                 if playlist:
                     session.delete(playlist)
                     session.commit()
@@ -90,7 +89,7 @@ class PlaylistRepository(IPlaylistRepository):
 
         try:
             with SessionLocal() as session:
-                playlist = session.query(PlaylistModel).filter(PlaylistModel.id == playlist_id).first()
+                playlist = session.query(DBPlaylist).filter(DBPlaylist.id == playlist_id).first()
                 
                 if playlist is None:
                     return False
@@ -113,7 +112,7 @@ class PlaylistRepository(IPlaylistRepository):
 
         try:
             with SessionLocal() as session:
-                result = session.query(PlaylistModel).filter(PlaylistModel.id == playlist_id).first()
+                result = session.query(DBPlaylist).filter(DBPlaylist.id == playlist_id).first()
 
                 if result is not None:
                     playlist = Playlist(
@@ -156,7 +155,7 @@ class PlaylistRepository(IPlaylistRepository):
 
         try:
             with SessionLocal() as session:
-                results = session.query(PlaylistModel).filter(PlaylistModel.user_id == user_id).all()
+                results = session.query(DBPlaylist).filter(DBPlaylist.user_id == user_id).all()
 
                 for result in results:
                     playlists.append(Playlist(
@@ -213,15 +212,15 @@ class PlaylistRepository(IPlaylistRepository):
 
                 results = session.execute(
                     select(
-                        MovieModel.id,
-                        MovieModel.poster_path
+                        DBMovie.id,
+                        DBMovie.poster_path
                 ).select_from(
                         t_playlist_media.join(
-                            MovieModel, t_playlist_media.c.movie_id == MovieModel.id
+                            DBMovie, t_playlist_media.c.movie_id == DBMovie.id
                         ).join(
-                            PlaylistModel, t_playlist_media.c.playlist_id == PlaylistModel.id
+                            DBPlaylist, t_playlist_media.c.playlist_id == DBPlaylist.id
                         )
-                    ).where(PlaylistModel.id == playlist_id)
+                    ).where(DBPlaylist.id == playlist_id)
                 ).fetchall()
 
                 for result in results:

@@ -1,9 +1,8 @@
 import datetime
 from typing import Optional
 
-import db_config
 from database.db import SessionLocal
-from database.models import User
+from database.models import User as DBUser
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
@@ -15,7 +14,7 @@ class UserRepository(IUserRepository):
 
         try:
             with SessionLocal() as session:
-                new_user = User(
+                new_user = DBUser(
                     id=user.id,
                     username=user.username,
                     email=user.email,
@@ -47,14 +46,14 @@ class UserRepository(IUserRepository):
         return success
 
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
-        user: Optional[User] = None
+    def get_user_by_username(self, username: str) -> Optional[DBUser]:
+        user: Optional[DBUser] = None
         try:
             with SessionLocal() as session:
-                result = session.query(User).filter(User.username == username).first()
+                result = session.query(DBUser).filter(DBUser.username == username).first()
 
                 if result is not None:
-                    user = User(
+                    user = DBUser(
                         id=result.id,
                         username=result.username,
                         email=result.email,
@@ -82,14 +81,14 @@ class UserRepository(IUserRepository):
         return user
 
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
-        user: Optional[User] = None
+    def get_user_by_email(self, email: str) -> Optional[DBUser]:
+        user: Optional[DBUser] = None
         try:
             with SessionLocal() as session:
-                result = session.query(User).filter(User.email == email).first()
+                result = session.query(DBUser).filter(DBUser.email == email).first()
 
                 if result is not None:
-                    user = User(
+                    user = DBUser(
                         id=result.id,
                         username=result.username,
                         email=result.email,
@@ -118,14 +117,14 @@ class UserRepository(IUserRepository):
         return user
 
 
-    def get_user_by_id(self, id: str) -> Optional[User]:
-        user: Optional[User] = None
+    def get_user_by_id(self, id: str) -> Optional[DBUser]:
+        user: Optional[DBUser] = None
         try:
             with SessionLocal() as session:
-                result = session.query(User).filter(User.id == id).first()
+                result = session.query(DBUser).filter(DBUser.id == id).first()
 
                 if result is not None:
-                    user = User(
+                    user = DBUser(
                         id=result.id,
                         username=result.username,
                         email=result.email,
@@ -157,7 +156,7 @@ class UserRepository(IUserRepository):
     def verify_user_by_code(self, user_verification: UserVerification) -> str:
         try:           
             with SessionLocal() as session:
-                result = session.query(User).filter(User.verification_code == user_verification.code, User.verification_code_token == user_verification.token).first()
+                result = session.query(DBUser).filter(DBUser.verification_code == user_verification.code, DBUser.verification_code_token == user_verification.token).first()
                 if result is not None:
                     return result.id
                 else:
@@ -171,7 +170,7 @@ class UserRepository(IUserRepository):
     def update_verification_status(self, id: str) -> bool:
         try:    
             with SessionLocal() as session:
-                user = session.query(User).filter(User.id == id).first()
+                user = session.query(DBUser).filter(DBUser.id == id).first()
                 if user is not None:
                     user.is_verified = True
                     session.commit()
@@ -192,7 +191,7 @@ class UserRepository(IUserRepository):
 
         try:
             with SessionLocal() as session:
-                user = session.query(User).filter(User.id == user_id).first()
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
                 if user is not None:
                     session.delete(user)
                     session.commit()

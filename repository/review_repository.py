@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import List
 
-import db_config
 from domain.interfaces.repositories.i_review_repository import IReviewRepository
 from domain.models.review import Review, UserInfo
 from database.db import SessionLocal
-from database.models import t_review, User as UserModel
+from database.models import t_review, User as DBUser
 
 
 class ReviewRepository(IReviewRepository):
@@ -44,9 +43,9 @@ class ReviewRepository(IReviewRepository):
                     t_review.c.rating,
                     t_review.c.comment,
                     t_review.c.has_spoiler_warning,
-                    UserModel.username,
-                    UserModel.profile_picture_path
-                ).join(UserModel, UserModel.id == t_review.c.user_id).filter(
+                    DBUser.username,
+                    DBUser.profile_picture_path
+                ).join(DBUser, DBUser.id == t_review.c.user_id).filter(
                     t_review.c.movie_id == media_id,
                     t_review.c.comment != None
                 ).all()

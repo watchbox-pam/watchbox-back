@@ -1,13 +1,12 @@
 from typing import Optional, List
 
-import db_config
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.models.movie import PopularMovieList, MovieDetail
 from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
 from database.db import SessionLocal
-from database.models import Movie
+from database.models import Movie as DBMovie
 from sqlalchemy import func
 
 class MovieRepository(IMovieRepository):
@@ -38,15 +37,15 @@ class MovieRepository(IMovieRepository):
         return movie
 
 
-    def search(self, search_term: str) -> Optional[list[Movie]]:
+    def search(self, search_term: str) -> Optional[list[DBMovie]]:
         endpoint = f"/search/movie?query={search_term}&include_adult=false&language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
-        movies: list[Movie] = []
+        movies: list[DBMovie] = []
 
         for res in result["results"]:
-            movies.append(Movie(
+            movies.append(DBMovie(
                 id=res["id"],
                 adult=res["adult"],
                 backdrop_path=res["backdrop_path"],
@@ -97,7 +96,7 @@ class MovieRepository(IMovieRepository):
     def movie_runtime(self, movie_ids: List[int]) -> int:
         try:
             with SessionLocal() as session:
-                movies = session.query(Movie).filter(Movie.id.in_(movie_ids))
+                movies = session.query(DBMovie).filter(DBMovie.id.in_(movie_ids))
                 total_runtime = sum(movie.runtime for movie in movies)
                 return total_runtime
         except Exception as e:
@@ -106,11 +105,11 @@ class MovieRepository(IMovieRepository):
         
     def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
 
-        movies: List[Movie] = []
+        movies: List[DBMovie] = []
 
         try:
             with SessionLocal() as session:
-                results = session.query(Movie).order_by(func.random()).filter(Movie.popularity >= 70).limit(count).all()
+                results = session.query(DBMovie).order_by(func.random()).filter(DBMovie.popularity >= 70).limit(count).all()
                 for result in results:
                     movies.append(MovieListItem(
                         id=result.id,
