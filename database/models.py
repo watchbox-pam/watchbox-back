@@ -3,9 +3,12 @@ import datetime
 import uuid
 
 from sqlalchemy import ARRAY, BigInteger, Boolean, Column, Date, DateTime, Double, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, String, Table, Text, UniqueConstraint, Uuid, text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from database.db import Base
-    
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+
+class Base(MappedAsDataclass, DeclarativeBase):
+    pass
+
+
 class Country(Base):
     __tablename__ = 'country'
     __table_args__ = (
@@ -15,6 +18,7 @@ class Country(Base):
 
     iso: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    exists: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('true'))
 
     user: Mapped[list['User']] = relationship('User', back_populates='country_')
 
@@ -86,6 +90,7 @@ class MediaProvider(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     logo: Mapped[Optional[str]] = mapped_column(String)
+    display_priority: Mapped[Optional[int]] = mapped_column(Integer)
 
 
 class Movie(Base):
@@ -112,10 +117,9 @@ class Movie(Base):
     title: Mapped[Optional[str]] = mapped_column(String)
     popularity: Mapped[Optional[float]] = mapped_column(Double(53))
     video: Mapped[Optional[str]] = mapped_column(String)
+    infos_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
 
     genre: Mapped[list['MovieGenre']] = relationship('MovieGenre', secondary='movie_movie_genre', back_populates='movie')
-    comment: Mapped[list['Comment']] = relationship('Comment', back_populates='movie')
-    playlist_media: Mapped[list['PlaylistMedia']] = relationship('PlaylistMedia', back_populates='movie')
 
 
 class MovieGenre(Base):
@@ -176,8 +180,6 @@ class Tv(Base):
     genre: Mapped[list['TvGenre']] = relationship('TvGenre', secondary='tv_tv_genre', back_populates='tv')
     person: Mapped[list['Person']] = relationship('Person', secondary='tv_created_by', back_populates='tv')
     tv_season: Mapped[list['TvSeason']] = relationship('TvSeason', back_populates='tv')
-    comment: Mapped[list['Comment']] = relationship('Comment', back_populates='tv')
-    playlist_media: Mapped[list['PlaylistMedia']] = relationship('PlaylistMedia', back_populates='tv')
 
 
 class TvGenre(Base):
@@ -212,8 +214,7 @@ t_media_keyword = Table(
     Column('movie_id', Integer),
     Column('tv_id', Integer),
     ForeignKeyConstraint(['keyword_id'], ['keyword.id'], name='media_keyword_keyword_id_fkey'),
-    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='media_keyword_movie_id_fkey'),
-    ForeignKeyConstraint(['tv_id'], ['tv.id'], name='media_keyword_tv_id_fkey')
+    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='media_keyword_movie_id_fkey')
 )
 
 
@@ -347,17 +348,16 @@ class User(Base):
     last_connection: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('now()'))
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('now()'))
     salt: Mapped[str] = mapped_column(String(32), nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
     country: Mapped[Optional[str]] = mapped_column(String)
     profile_picture_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers l'image de profil de l'utilisateur")
-    banner_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers la bannière de l'utilisateur")
-    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
-    password_reset_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    verification_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    verification_code_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    banner_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers la banniere de l'utilisateur")
+    password_reset_token: Mapped[Optional[str]] = mapped_column(String)
+    verification_code: Mapped[Optional[str]] = mapped_column(String)
+    verification_code_token: Mapped[Optional[str]] = mapped_column(String)
 
     country_: Mapped[Optional['Country']] = relationship('Country', back_populates='user')
-    playlist: Mapped[list['Playlist']] = relationship('Playlist', back_populates='user')
-    comment: Mapped[list['Comment']] = relationship('Comment', back_populates='user')
+    playlist: Mapped[list['Playlist']] = relationship('Playlist', back_populates='user', cascade='all, delete-orphan')
 
 
 t_friend = Table(
@@ -415,33 +415,6 @@ class TvEpisode(Base):
     season_id: Mapped[Optional[str]] = mapped_column(String)
 
     season: Mapped[Optional['TvSeason']] = relationship('TvSeason', back_populates='tv_episode')
-    comment: Mapped[list['Comment']] = relationship('Comment', back_populates='tv_episode')
-
-
-class Comment(Base):
-    __tablename__ = 'comment'
-    __table_args__ = (
-        ForeignKeyConstraint(['movie_id'], ['movie.id'], name='comment_movie_id_fkey'),
-        ForeignKeyConstraint(['tv_episode_id'], ['tv_episode.id'], name='comment_tv_episode_id_fkey'),
-        ForeignKeyConstraint(['tv_id'], ['tv.id'], name='comment_tv_id_fkey'),
-        ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey'),
-        PrimaryKeyConstraint('id', name='comment_pkey')
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    rating: Mapped[int] = mapped_column(Integer, nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False, comment='Contenu du commentaire')
-    has_spoiler_warning: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
-    movie_id: Mapped[Optional[int]] = mapped_column(Integer)
-    tv_id: Mapped[Optional[int]] = mapped_column(Integer)
-    tv_episode_id: Mapped[Optional[int]] = mapped_column(Integer)
-    created_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, server_default=text('now()'))
-
-    movie: Mapped[Optional['Movie']] = relationship('Movie', back_populates='comment')
-    tv_episode: Mapped[Optional['TvEpisode']] = relationship('TvEpisode', back_populates='comment')
-    tv: Mapped[Optional['Tv']] = relationship('Tv', back_populates='comment')
-    user: Mapped['User'] = relationship('User', back_populates='comment')
 
 
 t_credit = Table(
@@ -463,19 +436,31 @@ t_credit = Table(
 )
 
 
-class PlaylistMedia(Playlist):
-    __tablename__ = 'playlist_media'
-    __table_args__ = (
-        ForeignKeyConstraint(['movie_id'], ['movie.id'], name='playlist_media_movie_id_fkey'),
-        ForeignKeyConstraint(['playlist_id'], ['playlist.id'], name='playlist_media_playlist_id_fkey'),
-        ForeignKeyConstraint(['tv_id'], ['tv.id'], name='playlist_media_tv_id_fkey'),
-        PrimaryKeyConstraint('playlist_id', name='playlist_media_pkey')
-    )
+t_playlist_media = Table(
+    'playlist_media', Base.metadata,
+    Column('playlist_id', Uuid, nullable=False),
+    Column('movie_id', Integer),
+    Column('tv_id', Integer),
+    Column('add_date', DateTime, server_default=text('now()')),
+    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='playlist_media_movie_id_fkey'),
+    ForeignKeyConstraint(['playlist_id'], ['playlist.id'], name='playlist_media_playlist_id_fkey', ondelete='CASCADE'),
+    ForeignKeyConstraint(['tv_id'], ['tv.id'], name='playlist_media_tv_id_fkey')
+)
 
-    playlist_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    movie_id: Mapped[Optional[int]] = mapped_column(Integer)
-    tv_id: Mapped[Optional[int]] = mapped_column(Integer)
-    add_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, server_default=text('now()'))
 
-    movie: Mapped[Optional['Movie']] = relationship('Movie', back_populates='playlist_media')
-    tv: Mapped[Optional['Tv']] = relationship('Tv', back_populates='playlist_media')
+t_review = Table(
+    'review', Base.metadata,
+    Column('rating', Integer, nullable=False),
+    Column('comment', Text, comment='Contenu du commentaire'),
+    Column('has_spoiler_warning', Boolean, nullable=False),
+    Column('movie_id', Integer),
+    Column('tv_id', Integer),
+    Column('tv_episode_id', Integer),
+    Column('user_id', Uuid, nullable=False),
+    Column('created_at', DateTime, server_default=text('now()')),
+    Column('id', Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
+    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='comment_movie_id_fkey'),
+    ForeignKeyConstraint(['tv_episode_id'], ['tv_episode.id'], name='comment_tv_episode_id_fkey'),
+    ForeignKeyConstraint(['tv_id'], ['tv.id'], name='comment_tv_id_fkey'),
+    ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey', ondelete='CASCADE'),
+)
