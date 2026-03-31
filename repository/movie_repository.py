@@ -1,12 +1,13 @@
 from typing import Optional, List
 
-import db_config
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
-from domain.models.movie import Movie, PopularMovieList, MovieDetail
+from domain.models.movie import PopularMovieList, MovieDetail
 from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
-
+from database.db import SessionLocal
+from database.models import Movie as DBMovie
+from sqlalchemy import func
 
 class MovieRepository(IMovieRepository):
     def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
@@ -36,19 +37,20 @@ class MovieRepository(IMovieRepository):
         return movie
 
 
-    def search(self, search_term: str) -> Optional[list[Movie]]:
+    def search(self, search_term: str) -> Optional[list[MovieDetail]]:
         endpoint = f"/search/movie?query={search_term}&include_adult=false&language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
-        movies: list[Movie] = []
+        movies: list[MovieDetail] = []
 
         for res in result["results"]:
-            movies.append(Movie(
+            movies.append(MovieDetail(
                 id=res["id"],
                 adult=res["adult"],
                 backdrop_path=res["backdrop_path"],
                 budget=0,
+                genres=[],
                 original_language=res["original_language"],
                 original_title=res["original_title"],
                 overview=res["overview"],
@@ -94,39 +96,27 @@ class MovieRepository(IMovieRepository):
 
     def movie_runtime(self, movie_ids: List[int]) -> int:
         try:
-            print(f"[DEBUG] Calcul du runtime pour les IDs : {movie_ids}")
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT SUM(runtime) FROM public.movie WHERE id = ANY(%s);", (movie_ids,))
-                    result = cur.fetchone()
-                    print(f"[DEBUG] Résultat SQL : {result}")
-                    return result[0] if result and result[0] else 0
+            with SessionLocal() as session:
+                movies = session.query(DBMovie).filter(DBMovie.id.in_(movie_ids))
+                total_runtime = sum(movie.runtime for movie in movies)
+                return total_runtime
         except Exception as e:
             print(f"[ERREUR] Exception dans movie_runtime : {e}")
             return 0
         
     def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
 
-        movies: List[Movie] = []
+        movies: List[DBMovie] = []
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = """
-                        SELECT id, title, poster_path FROM public.movie 
-                        WHERE popularity >= 70
-                        ORDER BY RANDOM() 
-                        LIMIT %s;
-                    """
-                    cur.execute(query, (count,))
-                    results = cur.fetchall()
-
-                    for result in results:
-                        movies.append(MovieListItem(
-                            id=result[0],
-                            title=result[1],
-                            poster_path=result[2]
-                        ))
+            with SessionLocal() as session:
+                results = session.query(DBMovie).order_by(func.random()).filter(DBMovie.popularity >= 70).limit(count).all()
+                for result in results:
+                    movies.append(MovieListItem(
+                        id=result.id,
+                        title=result.title,
+                        poster_path=result.poster_path
+                    ))
 
         except Exception as e:
             print(e)
