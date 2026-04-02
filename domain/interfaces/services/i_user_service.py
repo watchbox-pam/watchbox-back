@@ -29,6 +29,9 @@ class IUserService(Protocol):
     def delete_user(self, user_id: str) -> bool:
         ...
 
+    def get_all_users(self) -> list[User]:
+        ...
+
     def send_password_reset_email(self, email: str) -> bool:
         ...
 
