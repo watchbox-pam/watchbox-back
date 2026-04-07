@@ -43,10 +43,8 @@ class RecommendationRepository(IRecommendationRepository):
                                 title="",
                                 weight=0
                             ))
-
         except Exception as e:
             print(e)
-
         return medias
 
     def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
@@ -66,10 +64,8 @@ class RecommendationRepository(IRecommendationRepository):
                              "WHERE mg.genre_id = ANY(%s) "
                              "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537))"
                              "group by mg.movie_id, m.title;")
-
                     cur.execute(query, (genres,))
                     results = cur.fetchall()
-
                     if results is not None:
                         for result in results:
                             credits = []
@@ -85,10 +81,8 @@ class RecommendationRepository(IRecommendationRepository):
                                 credits=credits,
                                 weight=0
                             ))
-
         except Exception as e:
             print(e)
-
         return medias
 
     def find_with_review(self, user_id: str, movie_ids: List[int]) -> List[MovieReview]:
@@ -113,3 +107,33 @@ class RecommendationRepository(IRecommendationRepository):
             print(e)
 
         return medias
+
+    def get_all_reviews(self) -> List[dict]:  # 👈 ajouté
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT user_id, movie_id, rating
+                        FROM public.review
+                        WHERE rating IS NOT NULL
+                    """)
+                    return [{"user_id": r[0], "movie_id": r[1], "rating": r[2]} for r in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
+
+    def get_all_implicit_feedback(self) -> List[dict]:  # 👈 ajouté
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT pm.user_id, pm.movie_id,
+                            CASE WHEN p.title = 'Favoris' THEN 2.0 ELSE 1.0 END as weight
+                        FROM public.playlist_media pm
+                        JOIN public.playlist p ON p.id = pm.playlist_id
+                        WHERE p.title IN ('Watchlist', 'Favoris')
+                    """)
+                    return [{"user_id": r[0], "movie_id": r[1], "weight": r[2]} for r in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
