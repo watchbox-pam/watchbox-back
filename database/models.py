@@ -464,3 +464,12 @@ t_review = Table(
     ForeignKeyConstraint(['tv_id'], ['tv.id'], name='comment_tv_id_fkey'),
     ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey', ondelete='CASCADE'),
 )
+
+
+t_ml_training_counter = Table(
+    'ml_training_counter', Base.metadata,
+    Column('id', Integer, Identity(always=False, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
+    Column('new_ratings_count', Integer, server_default=text('0')),
+    Column('last_trained_at', DateTime, server_default=text('now()')),
+    PrimaryKeyConstraint('id', name='ml_training_counter_pkey')
+)
