@@ -10,6 +10,7 @@ class WatchProvidersRepository(IWatchProvidersRepository):
         endpoint = f"/movie/{movie_id}/watch/providers"
 
         result = call_tmdb_api(endpoint)
+        #print(f"[WATCH PROVIDERS] movie_id={movie_id} | result={result}")
 
         providers = WatchProviders(
             id=result["id"],
