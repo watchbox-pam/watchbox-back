@@ -49,7 +49,12 @@ class RecommendationService(IRecommendationService):
         union = len(set1 | set2)
         return intersection / union if union > 0 else 0.0
 
-    def _diversify(self, medias: List[MovieRecommendation], top_n: int = 10, diversity_penalty: float = 0.3) -> List[MovieRecommendation]:
+    def _diversify(
+        self,
+        medias: List[MovieRecommendation],
+        top_n: int = 10,
+        diversity_penalty: float = 0.3
+    ) -> List[MovieRecommendation]:
         if not medias:
             return []
         features = {m.id: set(m.keywords) | set(m.genres) for m in medias}
@@ -79,33 +84,49 @@ class RecommendationService(IRecommendationService):
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
-    def _get_cold_start_recommendations(self, emotion: Emotion) -> List[MovieRecommendation]:
+    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10) -> List[MovieRecommendation]:
         genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
         for media in genre_medias:
             media.weight = media.popularity
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
-        return self._diversify(genre_medias[:50], top_n=10, diversity_penalty=0.6)
+        return self._diversify(genre_medias[:50], top_n=limit, diversity_penalty=0.6)[:limit]
 
-    def get_recommendations(self, emotion: Emotion, user_id: str):
+    def get_recommendations(
+        self,
+        emotion: Emotion,
+        user_id: str,
+        limit: int = 10,
+        exclude_ids: list[int] | None = None
+    ):
+        if limit < 1:
+            limit = 1
+        if limit > 50:
+            limit = 50
+
+        exclude_set = set(exclude_ids or [])
+
         user_playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
         user_watchlist_id = user_history_id = user_favorites_id = ""
 
         for item in user_playlists:
-            if item.title == "Watchlist":  user_watchlist_id = str(item.id)
-            if item.title == "Historique": user_history_id   = str(item.id)
-            if item.title == "Favoris":    user_favorites_id = str(item.id)
+            if item.title == "Watchlist":
+                user_watchlist_id = str(item.id)
+            if item.title == "Historique":
+                user_history_id = str(item.id)
+            if item.title == "Favoris":
+                user_favorites_id = str(item.id)
 
-        user_watchlist = self.playlist_repository.get_playlist_medias(user_watchlist_id)
-        user_history   = self.playlist_repository.get_playlist_medias(user_history_id)
-        user_favorites = self.playlist_repository.get_playlist_medias(user_favorites_id)
+        user_watchlist = self.playlist_repository.get_playlist_medias(user_watchlist_id) or []
+        user_history = self.playlist_repository.get_playlist_medias(user_history_id) or []
+        user_favorites = self.playlist_repository.get_playlist_medias(user_favorites_id) or []
 
         watchlist_ids = [m.movie_id for m in user_watchlist]
-        history_ids   = [m.movie_id for m in user_history]
+        history_ids = [m.movie_id for m in user_history]
         favorites_ids = [m.movie_id for m in user_favorites]
 
         if self._is_cold_start(user_id, watchlist_ids, history_ids, favorites_ids):
             print(f"Cold start détecté pour user {user_id}")
-            return self._get_cold_start_recommendations(emotion)
+            return self._get_cold_start_recommendations(emotion, limit=limit)
 
         keywords, actors, directors = [], [], []
 
@@ -114,8 +135,10 @@ class RecommendationService(IRecommendationService):
                 for kw in media.keywords:
                     keywords.append({"value": kw, "weight": 10})
                 for c in media.credits:
-                    if c["job_id"] == "96":    actors.append({"value": c["person_id"], "weight": 10})
-                    elif c["job_id"] == "537": directors.append({"value": c["person_id"], "weight": 10})
+                    if c["job_id"] == "96":
+                        actors.append({"value": c["person_id"], "weight": 10})
+                    elif c["job_id"] == "537":
+                        directors.append({"value": c["person_id"], "weight": 10})
 
         if history_ids:
             history_reviews: List[MovieReview] = self.repository.find_with_review(user_id, history_ids)
@@ -125,25 +148,39 @@ class RecommendationService(IRecommendationService):
                 for kw in media.keywords:
                     keywords.append({"value": kw, "weight": w})
                 for c in media.credits:
-                    if c["job_id"] == "96":    actors.append({"value": c["person_id"], "weight": w})
-                    elif c["job_id"] == "537": directors.append({"value": c["person_id"], "weight": w})
+                    if c["job_id"] == "96":
+                        actors.append({"value": c["person_id"], "weight": w})
+                    elif c["job_id"] == "537":
+                        directors.append({"value": c["person_id"], "weight": w})
 
         if favorites_ids:
             for media in self.repository.find_by_ids_recommendation(favorites_ids):
                 for kw in media.keywords:
                     keywords.append({"value": kw, "weight": 20})
                 for c in media.credits:
-                    if c["job_id"] == "96":    actors.append({"value": c["person_id"], "weight": 20})
-                    elif c["job_id"] == "537": directors.append({"value": c["person_id"], "weight": 20})
+                    if c["job_id"] == "96":
+                        actors.append({"value": c["person_id"], "weight": 20})
+                    elif c["job_id"] == "537":
+                        directors.append({"value": c["person_id"], "weight": 20})
 
         genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
+
+        # Exclure historique + exclude_ids
+        history_set = set(history_ids)
+        if history_set or exclude_set:
+            genre_medias = [
+                m for m in genre_medias
+                if (m.id not in history_set and m.id not in exclude_set)
+            ]
+
         candidate_ids = [m.id for m in genre_medias]
+
+        if not genre_medias:
+            return self._get_cold_start_recommendations(emotion, limit=limit)
 
         for media in genre_medias:
             media.weight = len(media.genres)
-            if media.id in history_ids:
-                media.weight = 0
-                continue
+
             if media.id in watchlist_ids:
                 media.weight += 10
             for kw in media.keywords:
@@ -170,12 +207,14 @@ class RecommendationService(IRecommendationService):
 
         for media in genre_medias:
             media.weight = (
-                svd_scores.get(media.id, 0.0)     * w_svd +
-                als_scores.get(media.id, 0.0)     * w_als +
-                content_scores.get(media.id, 0.0) * w_content
+                svd_scores.get(media.id, 0.0) * w_svd
+                + als_scores.get(media.id, 0.0) * w_als
+                + content_scores.get(media.id, 0.0) * w_content
             )
 
         genre_medias = sorted(genre_medias, key=lambda x: x.popularity, reverse=True)
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
 
-        return self._diversify(genre_medias[:30], top_n=10, diversity_penalty=0.3)
+        pool_size = max(30, limit * 3)
+        diversified = self._diversify(genre_medias[:pool_size], top_n=limit, diversity_penalty=0.3)
+        return diversified[:limit]
