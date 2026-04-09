@@ -30,7 +30,7 @@ class PersonRepository(IPersonRepository):
                 "media_type": item.get("media_type"),
                 "popularity": item.get("popularity")
             }
-            for item in result["combined_credits"]["cast"]
+            for item in result["combined_credits"]["cast"] if item["adult"] == False
         ]
         refactored_cast = sorted(refactored_cast, key=lambda x: x.get("popularity", 0), reverse=True)
 
@@ -42,7 +42,7 @@ class PersonRepository(IPersonRepository):
                 "media_type": item.get("media_type"),
                 "popularity": item.get("popularity")
             }
-            for item in result["combined_credits"]["crew"]
+            for item in result["combined_credits"]["crew"] if item["adult"] == False
         ]
         refactored_crew = sorted(refactored_crew, key=lambda x: x.get("popularity", 0), reverse=True)
 
