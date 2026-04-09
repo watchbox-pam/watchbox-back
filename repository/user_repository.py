@@ -210,16 +210,10 @@ class UserRepository(IUserRepository):
     def check_password_reset_token(self, password_reset_token: str) -> str:
         user_id: Optional[str] = None
         try:
-            with db_config.connect_to_db() as conn:
-
-                with conn.cursor() as cur:
-                    cur.execute("""SELECT id FROM public.user WHERE password_reset_token=%s;""",
-                                (password_reset_token,))
-
-                    result = cur.fetchone()
-
-                    if result is not None:
-                        user_id = result[0]
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.password_reset_token == password_reset_token).first()
+                if user is not None:
+                    user_id = user.id
 
         except Exception as e:
             print(e)
@@ -228,15 +222,16 @@ class UserRepository(IUserRepository):
 
     def update_user_password(self, new_password: UserPassword) -> bool:
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    query = ("UPDATE public.user SET is_verified=%s WHERE id=%s")
-
-                    values = (True, id)
-
-                    cur.execute(query, values)
-
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == new_password.user_id).first()
+                if user is not None:
+                    user.password = new_password.password
+                    user.salt = new_password.salt
+                    user.password_reset_token = new_password.token
+                    session.commit()
                     return True
+                else:
+                    return False
 
         except Exception as e:
             print(e)

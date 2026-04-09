@@ -161,14 +161,14 @@ class UserService(IUserService):
             raise Exception("Utilisateur non trouvé")
 
         password_reset_token = user_exists.password_reset_token
-        url = f"https://app.watchbox-app.fr/reset-password/{password_reset_token}"
+        url = f"https://app.watchbox-app.fr/resetPassword/{password_reset_token}"
 
         try:
             html = f"""\
             <b>Bonjour, {user_exists.username}</b><br/>
-            Voici le lien pour réinitialiser votre mot de passe watchbox {url}</a>
+            Voici le <a href="{url}">lien</a> pour réinitialiser votre mot de passe watchbox
             """
-            #send_mail(email, "Réinitialisation de votre mot de passe Watchbox", html)
+            send_mail(email, "Réinitialisation de votre mot de passe Watchbox", html)
 
             return True
 
@@ -178,7 +178,12 @@ class UserService(IUserService):
 
 
     def check_password_reset_token(self, password_reset_token: str) -> str:
-
+        try:
+            user_id = self.repository.check_password_reset_token(password_reset_token)
+            return user_id
+        except Exception as e:
+            print(e)
+            return ""
 
 
     def reset_user_password(self, new_password: UserPassword) -> bool:
@@ -191,5 +196,8 @@ class UserService(IUserService):
         password_reset_token_uuid = uuid.uuid4()
         hashed_password_reset_token = sha256(str(password_reset_token_uuid).encode('utf-8'))
         password_reset_token = hashed_password_reset_token.hexdigest()
+        new_password.token = password_reset_token
 
-        update_result = self.repository.update_user_password(password_reset_token)
+        update_result = self.repository.update_user_password(new_password)
+
+        return update_result
