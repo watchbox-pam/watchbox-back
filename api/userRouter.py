@@ -1,13 +1,14 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
-from typing import cast
+from pydantic import BaseModel
 import uuid
 
 from api.auth.verify_auth_token import check_jwt_token
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.userLogin import UserLogin
+from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
 from repository.playlist_repository import PlaylistRepository
@@ -128,3 +129,35 @@ async def delete_user(
             status_code=400,
             detail=str(error)
         )
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+@user_router.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, service: IUserService = Depends(get_user_service)):
+    try:
+        result = service.send_password_reset_email(request.email)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+class CheckPasswordResetTokenRequest(BaseModel):
+    token: str
+
+@user_router.post("/check-password-reset-token")
+async def forgot_password(request: CheckPasswordResetTokenRequest, service: IUserService = Depends(get_user_service)):
+    try:
+        result = service.check_password_reset_token(request.token)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.post("/reset-password")
+async def reset_password(new_password: UserPassword, service: IUserService = Depends(get_user_service)):
+    try:
+        result = service.reset_user_password(new_password)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))

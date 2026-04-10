@@ -4,6 +4,8 @@ from typing import Optional
 from database.db import SessionLocal
 from database.models import User as DBUser
 from domain.interfaces.repositories.i_user_repository import IUserRepository
+from domain.models.user import User
+from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
 
@@ -154,7 +156,7 @@ class UserRepository(IUserRepository):
 
 
     def verify_user_by_code(self, user_verification: UserVerification) -> str:
-        try:           
+        try:
             with SessionLocal() as session:
                 result = session.query(DBUser).filter(DBUser.verification_code == user_verification.code, DBUser.verification_code_token == user_verification.token).first()
                 if result is not None:
@@ -168,7 +170,7 @@ class UserRepository(IUserRepository):
 
 
     def update_verification_status(self, id: str) -> bool:
-        try:    
+        try:
             with SessionLocal() as session:
                 user = session.query(DBUser).filter(DBUser.id == id).first()
                 if user is not None:
@@ -203,3 +205,34 @@ class UserRepository(IUserRepository):
             print(f"Error deleting user: {e}")
 
         return success
+
+
+    def check_password_reset_token(self, password_reset_token: str) -> str:
+        user_id: Optional[str] = None
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.password_reset_token == password_reset_token).first()
+                if user is not None:
+                    user_id = user.id
+
+        except Exception as e:
+            print(e)
+
+        return user_id
+
+    def update_user_password(self, new_password: UserPassword) -> bool:
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == new_password.user_id).first()
+                if user is not None:
+                    user.password = new_password.password
+                    user.salt = new_password.salt
+                    user.password_reset_token = new_password.token
+                    session.commit()
+                    return True
+                else:
+                    return False
+
+        except Exception as e:
+            print(e)
+            return False
