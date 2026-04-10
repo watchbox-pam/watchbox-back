@@ -3,7 +3,7 @@ from typing import List, Dict
 
 class Emotion(Enum):
     FRISSON = "frisson"
-    EXCITATION = "excitation"
+    ADRÉNALINE = "adrenaline"
     EMERVEILLEMENT = "emerveillement"
     RIRE = "rire"
     ROMANTISME = "romantisme"
@@ -13,7 +13,7 @@ class Emotion(Enum):
 
 EMOTION_GENRE_MAPPING: Dict[Emotion, List[int]] = {
     Emotion.FRISSON:        [27, 53, 80, 9648, 878],             # Horreur, Thriller, Crime, Mystère, Science-Fiction
-    Emotion.EXCITATION:     [12, 28, 10752, 37, 878, 53],        # Aventure, Action, Guerre, Western, Science-Fiction, Thriller
+    Emotion.ADRÉNALINE:     [12, 28, 10752, 37, 878, 53],        # Aventure, Action, Guerre, Western, Science-Fiction, Thriller
     Emotion.EMERVEILLEMENT: [14, 878, 16, 12],                   # Fantastique, Science-Fiction, Animation, Aventure
     Emotion.RIRE:           [35, 16, 10751, 10770],              # Comédie, Animation, Familial, Téléfilm
     Emotion.ROMANTISME:     [10749, 10402, 18, 35],              # Romance, Musique, Drame, Comédie
