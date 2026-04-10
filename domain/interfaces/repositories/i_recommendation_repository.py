@@ -13,3 +13,9 @@ class IRecommendationRepository(Protocol):
 
     def find_with_review(self, user_id: str, movie_ids: List[int]) -> List[MovieReview]:
         ...
+
+    def get_all_reviews(self) -> List[dict]:
+        ...
+
+    def get_all_implicit_feedback(self) -> List[dict]:  # 👈 ajouté
+        ...

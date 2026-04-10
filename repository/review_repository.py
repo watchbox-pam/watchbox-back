@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import List
 
+import db_config
+
 from domain.interfaces.repositories.i_review_repository import IReviewRepository
 from domain.models.review import Review, UserInfo
 from database.db import SessionLocal
@@ -10,7 +12,6 @@ from database.models import t_review, User as DBUser
 class ReviewRepository(IReviewRepository):
     def create_review(self, review: Review) -> bool:
         success: bool = False
-
         try:
             with SessionLocal() as session:
                 new_review = t_review.insert().values(
@@ -26,16 +27,12 @@ class ReviewRepository(IReviewRepository):
                 session.execute(new_review)
                 session.commit()
                 success = True
-
-        except (Exception) as e:
+        except Exception as e:
             print(e)
-
         return success
-
 
     def get_reviews_by_media(self, media_id: int) -> List[Review]:
         reviews = []
-
         try:
             with SessionLocal() as session:
                 results = session.query(
@@ -49,7 +46,6 @@ class ReviewRepository(IReviewRepository):
                     t_review.c.movie_id == media_id,
                     t_review.c.comment != None
                 ).all()
-
                 if results is not None:
                     for result in results:
                         reviews.append(Review(
@@ -69,3 +65,31 @@ class ReviewRepository(IReviewRepository):
             print(e)
 
         return reviews
+
+    def increment_counter(self) -> int:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE ml_training_counter
+                        SET new_ratings_count = new_ratings_count + 1
+                        RETURNING new_ratings_count
+                    """)
+                    conn.commit()
+                    return cur.fetchone()[0]
+        except Exception as e:
+            print(e)
+            return 0
+
+    def reset_counter(self) -> None:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE ml_training_counter
+                        SET new_ratings_count = 0,
+                            last_trained_at = NOW()
+                    """)
+                    conn.commit()
+        except Exception as e:
+            print(e)

@@ -13,8 +13,8 @@ class CreditsRepository(ICreditsRepository):
 
         credits = Credits(
             id=result["id"],
-            cast=result["cast"],
-            crew=result["crew"]
+            cast=[member for member in result["cast"] if member["adult"] == False],
+            crew=[member for member in result["crew"] if member["adult"] == False],
         )
 
         return credits
