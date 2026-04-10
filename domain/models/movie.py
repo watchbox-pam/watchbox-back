@@ -1,5 +1,6 @@
 from datetime import date
 from dataclasses import dataclass
+from typing import Optional
 
 from domain.models.genre import Genre
 
@@ -22,6 +23,13 @@ class MovieDetail:
     title: str
     video: str
     infos_complete: bool
+    age_restriction: Optional[str] = None
+    casting: Optional[list] = None
+    director: Optional[dict] = None
+    composer: Optional[dict] = None
+    video_key: Optional[str] = None
+    providers: Optional[list] = None
+    providers_link: Optional[str] = None
 
 @dataclass(frozen=True)
 class Movie:
