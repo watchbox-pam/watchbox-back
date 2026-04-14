@@ -23,6 +23,13 @@ class SearchRepository(ISearchRepository):
 
 
                 if media_type == "movie":
+
+                    poster_path = item.get("poster_path")
+
+                    # Filtre : affiche obligatoire
+                    if not poster_path:
+                        continue
+                
                     # If providers filter is active, check if the movie is available on selected providers
                     if providers:
                         movie_providers = self._get_movie_providers(item.get("id"))
