@@ -17,8 +17,10 @@ class SearchRepository(ISearchRepository):
         movies, people, tv = [], [], []
 
         if "results" in result:
+            
             for item in result["results"]:
                 media_type = item.get("media_type")
+
 
                 if media_type == "movie":
                     # If providers filter is active, check if the movie is available on selected providers
@@ -40,6 +42,14 @@ class SearchRepository(ISearchRepository):
                         "popularity": item.get("popularity", 0),
                     })
                 elif media_type == "person":
+                    name = item.get("name", "")
+                    profile_path = item.get("profile_path")
+
+                    if not profile_path:
+                        continue
+                    if len(name.strip().split()) < 2:
+                        continue
+
                     people.append({
                         "id": item.get("id"),
                         "name": item.get("name", ""),
