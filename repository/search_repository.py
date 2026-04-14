@@ -8,60 +8,12 @@ from utils.tmdb_service import call_tmdb_api
 
 
 class SearchRepository(ISearchRepository):
-
-    @staticmethod
-    def _normalize(text: str) -> str:
-        """Lowercase, supprime accents, trim"""
-        return (unicodedata.normalize("NFD", text.lower()) \
-            .encode("ascii", "ignore").decode("utf-8").strip())
     
-    @staticmethod
-    def _text_score(text: str, query: str) -> float:
-        """
-        Retourne un score textuel entre 0 et 1000 selon la correspondance.
-        Priorité : exact > commence par (mot) > commence par (substring) > contient
-        """
-
-        if not text or not query:
-            return 0
-        
-        if text == query:
-            return 1000
-        
-        if text.startswith(query + " "):
-            return 800
-        
-        if text.startswith(query):
-            return 600
-        
-        words = text.split()
-        if any(w.startswith(query) for w in words):
-            return 300
-        
-        if query in text:
-            return 100
-        
-        else:
-            return 0
-
     def _score_movie(self, movie: Dict, term: str) -> float:
-        query = self._normalize(term)
-        title = self._normalize(movie.get("title", ""))
-        original = self._normalize(movie.get("original_title", ""))
-        popularity = movie.get("popularity", 0)
-
-        text_score = max(self._text_score(title, query), self._text_score(original, query))
-        pop_bonus = math.log1p(popularity) * 2
-        return text_score + pop_bonus
+        return movie.get("popularity", 0)
 
     def _score_person(self, person: Dict, term: str) -> float:
-        query = self._normalize(term)
-        name = self._normalize(person.get("name", ""))
-        popularity = person.get("popularity", 0)
-
-        text_score = self._text_score(name, query)
-        pop_bonus = math.log1p(popularity) * 2
-        return text_score + pop_bonus
+        return person.get("popularity", 0)
 
     def search_all(self, search_term: str, providers: Optional[List[int]] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -243,7 +195,7 @@ class SearchRepository(ISearchRepository):
         seen_titles = set()
         unique_suggestions = []
         for item in suggestions:
-            title = self._normalize(item.get("title") or item.get("name", ""))
+            title = (item.get("title") or item.get("name", ""))
             if title not in seen_titles:
                 seen_titles.add(title)
                 unique_suggestions.append(item)
