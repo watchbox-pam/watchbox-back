@@ -13,6 +13,15 @@ def get_search_service() -> ISearchService:
     repository = SearchRepository()
     return SearchService(repository)
 
+@search_router.get("/suggestions")
+def get_suggestions(
+    query: str,
+    providers: Optional[List[int]] = Query(default=None),
+    service: ISearchService = Depends(get_search_service)
+):
+    results = service.get_suggestions(query, providers)
+    return results
+
 @search_router.get("/{search_term}")
 async def search_all(
     search_term: str,
@@ -55,3 +64,4 @@ async def search_actors(search_term: str, service: ISearchService = Depends(get_
         return results
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
+    

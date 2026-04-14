@@ -1,10 +1,68 @@
 from typing import List, Dict, Any, Optional
 
+import math
+import unicodedata
+
 from domain.interfaces.repositories.i_search_repository import ISearchRepository
 from utils.tmdb_service import call_tmdb_api
 
 
 class SearchRepository(ISearchRepository):
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        """Lowercase, supprime accents, trim"""
+        return (unicodedata.normalize("NFD", text.lower()) \
+            .encode("ascii", "ignore").decode("utf-8").strip())
+    
+    @staticmethod
+    def _text_score(text: str, query: str) -> float:
+        """
+        Retourne un score textuel entre 0 et 1000 selon la correspondance.
+        Priorité : exact > commence par (mot) > commence par (substring) > contient
+        """
+
+        if not text or not query:
+            return 0
+        
+        if text == query:
+            return 1000
+        
+        if text.startswith(query + " "):
+            return 800
+        
+        if text.startswith(query):
+            return 600
+        
+        words = text.split()
+        if any(w.startswith(query) for w in words):
+            return 300
+        
+        if query in text:
+            return 100
+        
+        else:
+            return 0
+
+    def _score_movie(self, movie: Dict, term: str) -> float:
+        query = self._normalize(term)
+        title = self._normalize(movie.get("title", ""))
+        original = self._normalize(movie.get("original_title", ""))
+        popularity = movie.get("popularity", 0)
+
+        text_score = max(self._text_score(title, query), self._text_score(original, query))
+        pop_bonus = math.log1p(popularity) * 2
+        return text_score + pop_bonus
+
+    def _score_person(self, person: Dict, term: str) -> float:
+        query = self._normalize(term)
+        name = self._normalize(person.get("name", ""))
+        popularity = person.get("popularity", 0)
+
+        text_score = self._text_score(name, query)
+        pop_bonus = math.log1p(popularity) * 2
+        return text_score + pop_bonus
+
     def search_all(self, search_term: str, providers: Optional[List[int]] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
         Search for movies, TV shows, and people matching the search term and optional provider filters
@@ -13,9 +71,7 @@ class SearchRepository(ISearchRepository):
         result = call_tmdb_api(endpoint)
 
         # Organize results by category
-        movies = []
-        people = []
-        tv = []
+        movies, people, tv = [], [], []
 
         if "results" in result:
             for item in result["results"]:
@@ -59,9 +115,9 @@ class SearchRepository(ISearchRepository):
                         "popularity": item.get("popularity", 0),
                     })
 
-        movies.sort(key=lambda x: x['popularity'], reverse=True)
-        people.sort(key=lambda x: x['popularity'], reverse=True)
-        tv.sort(key=lambda x: x['popularity'], reverse=True)
+        movies.sort(key=lambda x: self._score_movie(x, search_term), reverse=True)
+        people.sort(key=lambda x: self._score_person(x, search_term), reverse=True)
+        tv.sort(key=lambda x: self._score_movie(x, search_term), reverse=True)
 
         return {
             "movies": movies,
@@ -100,7 +156,7 @@ class SearchRepository(ISearchRepository):
                     "popularity": item.get("popularity", 0),
                 })
 
-        movies.sort(key=lambda x: x['popularity'], reverse=True)
+        movies.sort(key=lambda x: self._score_movie(x, search_term), reverse=True)
 
         return movies
 
@@ -137,9 +193,64 @@ class SearchRepository(ISearchRepository):
                 person["known_for"] = known_for
                 people.append(person)
 
-        people.sort(key=lambda x: x['popularity'], reverse=True)
+        people.sort(key=lambda x: self._score_person(x, search_term), reverse=True)
 
         return people
+    
+    def search_suggestions(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
+        """
+        Search for movies, TV shows, and people matching the search term and optional provider filters
+        Returns only top 5 results per category without overview to be used as search suggestions
+        """
+        endpoint = f"/search/multi?query={search_term}&language=fr-FR&page=1&include_adult=false"
+        results = call_tmdb_api(endpoint)
+
+        suggestions = []
+
+        if "results" in results:
+            for item in results["results"]:
+                media_type = item.get("media_type")
+                if media_type not in ["movie", "person"]:
+                    continue
+
+                if media_type == "movie":
+                    if providers:
+                        movie_providers = self._get_movie_providers(item.get("id"))
+                        provider_ids = [p.get("id") for p in movie_providers]
+                        if not set(providers).intersection(set(provider_ids)):
+                            continue
+                    suggestions.append({
+                        "id": item.get("id"),
+                        "title": item.get("title", ""),
+                        "original_title": item.get("original_title", ""),
+                        "poster_path": item.get("poster_path"),
+                        "media_type": "movie",
+                        "popularity": item.get("popularity", 0),
+                        "release_date": item.get("release_date", "")
+                    })
+                elif media_type == "person":
+                    suggestions.append({
+                        "id": item.get("id"),
+                        "name": item.get("name", ""),
+                        "profile_path": item.get("profile_path"),
+                        "media_type": "person",
+                        "popularity": item.get("popularity", 0),
+                        "known_for_department": item.get("known_for_department", ""),
+                    })
+
+        suggestions.sort(key=lambda x: self._score_movie(x, search_term) if x["media_type"] == "movie" else self._score_person(x, search_term), reverse=True)
+
+        seen_titles = set()
+        unique_suggestions = []
+        for item in suggestions:
+            title = self._normalize(item.get("title") or item.get("name", ""))
+            if title not in seen_titles:
+                seen_titles.add(title)
+                unique_suggestions.append(item)
+            if len(unique_suggestions) == 5:
+                break
+
+        return unique_suggestions
 
     def _get_movie_providers(self, movie_id: int) -> List[Dict[str, Any]]:
         """

@@ -24,3 +24,9 @@ class SearchService(ISearchService):
         Search only for actors/people matching the search term
         """
         return self.repository.search_actors(search_term)
+    
+    def get_suggestions(self, search_term: str, providers: Optional[List[int]] = None):
+        """
+        Get search suggestions for movies, TV shows, and people matching the search term and optional provider filters
+        """
+        return self.repository.search_suggestions(search_term, providers)
