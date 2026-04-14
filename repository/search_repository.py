@@ -107,12 +107,29 @@ class SearchRepository(ISearchRepository):
         """
         Search only for actors/people matching the search term
         """
-        endpoint = f"/search/person?query={search_term}&language=fr-FR&page=1&include_adult=false"
-        result = call_tmdb_api(endpoint)
-
         people = []
-        if "results" in result:
+        seen_ids = set()
+
+        for page in range(1, 6):
+            endpoint = f"/search/person?query={search_term}&language=fr-FR&page={page}&include_adult=false"
+            result = call_tmdb_api(endpoint)
+
+            if "results" not in result or not result["results"]:
+                break
+
             for item in result["results"]:
+                name = item.get("name", "")
+                profile_path = item.get("profile_path")
+
+                if not profile_path:
+                    continue
+                if len(name.strip().split()) < 2:
+                    continue
+
+                if item.get("id") in seen_ids:
+                    continue
+                seen_ids.add(item.get("id"))
+
                 person = {
                     "id": item.get("id"),
                     "name": item.get("name", ""),
@@ -136,8 +153,11 @@ class SearchRepository(ISearchRepository):
                 person["known_for"] = known_for
                 people.append(person)
 
+            total_pages = result.get("total_pages", 1)
+            if page >= total_pages or len(people) >= 20:
+                break
+        
         people.sort(key=lambda x: x['popularity'], reverse=True)
-
         return people
     
     def search_suggestions(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
