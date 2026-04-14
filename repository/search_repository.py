@@ -1,19 +1,10 @@
 from typing import List, Dict, Any, Optional
 
-import math
-import unicodedata
-
 from domain.interfaces.repositories.i_search_repository import ISearchRepository
 from utils.tmdb_service import call_tmdb_api
 
 
 class SearchRepository(ISearchRepository):
-    
-    def _score_movie(self, movie: Dict, term: str) -> float:
-        return movie.get("popularity", 0)
-
-    def _score_person(self, person: Dict, term: str) -> float:
-        return person.get("popularity", 0)
 
     def search_all(self, search_term: str, providers: Optional[List[int]] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -67,9 +58,9 @@ class SearchRepository(ISearchRepository):
                         "popularity": item.get("popularity", 0),
                     })
 
-        movies.sort(key=lambda x: self._score_movie(x, search_term), reverse=True)
-        people.sort(key=lambda x: self._score_person(x, search_term), reverse=True)
-        tv.sort(key=lambda x: self._score_movie(x, search_term), reverse=True)
+        movies.sort(key=lambda x: x['popularity'], reverse=True)
+        people.sort(key=lambda x: x['popularity'], reverse=True)
+        tv.sort(key=lambda x: x['popularity'], reverse=True)
 
         return {
             "movies": movies,
@@ -108,7 +99,7 @@ class SearchRepository(ISearchRepository):
                     "popularity": item.get("popularity", 0),
                 })
 
-        movies.sort(key=lambda x: self._score_movie(x, search_term), reverse=True)
+        movies.sort(key=lambda x: x['popularity'], reverse=True)
 
         return movies
 
@@ -145,7 +136,7 @@ class SearchRepository(ISearchRepository):
                 person["known_for"] = known_for
                 people.append(person)
 
-        people.sort(key=lambda x: self._score_person(x, search_term), reverse=True)
+        people.sort(key=lambda x: x['popularity'], reverse=True)
 
         return people
     
@@ -190,7 +181,7 @@ class SearchRepository(ISearchRepository):
                         "known_for_department": item.get("known_for_department", ""),
                     })
 
-        suggestions.sort(key=lambda x: self._score_movie(x, search_term) if x["media_type"] == "movie" else self._score_person(x, search_term), reverse=True)
+        suggestions.sort(key=lambda x: x['popularity'], reverse=True)
 
         seen_titles = set()
         unique_suggestions = []
