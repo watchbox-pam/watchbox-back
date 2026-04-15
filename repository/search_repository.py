@@ -10,79 +10,13 @@ class SearchRepository(ISearchRepository):
         """
         Search for movies, TV shows, and people matching the search term and optional provider filters
         """
-        endpoint = f"/search/multi?query={search_term}&language=fr-FR&page=1&include_adult=false"
-        result = call_tmdb_api(endpoint)
-
-        # Organize results by category
-        movies, people, tv = [], [], []
-
-        if "results" in result:
-            
-            for item in result["results"]:
-                media_type = item.get("media_type")
-
-
-                if media_type == "movie":
-
-                    poster_path = item.get("poster_path")
-
-                    # Filtre : affiche obligatoire
-                    if not poster_path:
-                        continue
-                
-                    # If providers filter is active, check if the movie is available on selected providers
-                    if providers:
-                        movie_providers = self._get_movie_providers(item.get("id"))
-                        provider_ids = [p.get("id") for p in movie_providers]
-
-                        # If there's no intersection between requested providers and movie providers, skip this movie
-                        if not set(providers).intersection(set(provider_ids)):
-                            continue
-
-                    movies.append({
-                        "id": item.get("id"),
-                        "title": item.get("title", ""),
-                        "poster_path": item.get("poster_path"),
-                        "release_date": item.get("release_date", ""),
-                        "media_type": "movie",
-                        "original_title": item.get("original_title", ""),
-                        "popularity": item.get("popularity", 0),
-                    })
-                elif media_type == "person":
-                    name = item.get("name", "")
-                    profile_path = item.get("profile_path")
-
-                    if not profile_path:
-                        continue
-                    if len(name.strip().split()) < 2:
-                        continue
-
-                    people.append({
-                        "id": item.get("id"),
-                        "name": item.get("name", ""),
-                        "profile_path": item.get("profile_path"),
-                        "known_for_department": item.get("known_for_department", ""),
-                        "media_type": "person",
-                        "popularity": item.get("popularity", 0),
-                    })
-                elif media_type == "tv":
-                    tv.append({
-                        "id": item.get("id"),
-                        "title": item.get("name", ""),
-                        "poster_path": item.get("poster_path"),
-                        "first_air_date": item.get("first_air_date", ""),
-                        "media_type": "tv",
-                        "popularity": item.get("popularity", 0),
-                    })
-
-        movies.sort(key=lambda x: x['popularity'], reverse=True)
-        people.sort(key=lambda x: x['popularity'], reverse=True)
-        tv.sort(key=lambda x: x['popularity'], reverse=True)
+        movies = self.search_movies(search_term, providers)
+        people = self.search_actors(search_term)
 
         return {
             "movies": movies,
             "people": people,
-            "tv": tv
+            "tv": []
         }
 
     def search_movies(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
@@ -95,6 +29,12 @@ class SearchRepository(ISearchRepository):
         movies = []
         if "results" in result:
             for item in result["results"]:
+
+                if not item.get("poster_path"):
+                    continue
+                if not item.get("overview", "").strip():
+                    continue
+
                 # If providers filter is active, check if the movie is available on selected providers
                 if providers:
                     movie_providers = self._get_movie_providers(item.get("id"))
@@ -194,11 +134,16 @@ class SearchRepository(ISearchRepository):
                     continue
 
                 if media_type == "movie":
+
+                    if not item.get("poster_path"):
+                        continue
+
                     if providers:
                         movie_providers = self._get_movie_providers(item.get("id"))
                         provider_ids = [p.get("id") for p in movie_providers]
                         if not set(providers).intersection(set(provider_ids)):
                             continue
+
                     suggestions.append({
                         "id": item.get("id"),
                         "title": item.get("title", ""),
@@ -209,6 +154,13 @@ class SearchRepository(ISearchRepository):
                         "release_date": item.get("release_date", "")
                     })
                 elif media_type == "person":
+
+                    if not item.get("profile_path"):
+                        continue
+
+                    if len(item.get("name", "").strip().split()) < 2:
+                        continue
+
                     suggestions.append({
                         "id": item.get("id"),
                         "name": item.get("name", ""),

@@ -22,22 +22,6 @@ def get_suggestions(
     results = service.get_suggestions(query, providers)
     return results
 
-@search_router.get("/{search_term}")
-async def search_all(
-    search_term: str,
-    providers: Optional[List[int]] = Query(None),
-    service: ISearchService = Depends(get_search_service)
-):
-    """
-    Search all media types (movies, tv, people) based on the given search term
-    with optional provider filtering
-    """
-    try:
-        results = service.search_all(search_term, providers)
-        return results
-    except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
 @search_router.get("/movie/{search_term}")
 async def search_movies(
     search_term: str,
@@ -61,6 +45,22 @@ async def search_actors(search_term: str, service: ISearchService = Depends(get_
     """
     try:
         results = service.search_actors(search_term)
+        return results
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    
+@search_router.get("/{search_term}")
+async def search_all(
+    search_term: str,
+    providers: Optional[List[int]] = Query(None),
+    service: ISearchService = Depends(get_search_service)
+):
+    """
+    Search all media types (movies, tv, people) based on the given search term
+    with optional provider filtering
+    """
+    try:
+        results = service.search_all(search_term, providers)
         return results
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
