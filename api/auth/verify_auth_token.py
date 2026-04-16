@@ -4,7 +4,7 @@ import jwt
 import os
 
 from database.db import SessionLocal
-from database.models import User as DBUser
+from database.modelsTemp import User as DBUser
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv

@@ -1,7 +1,7 @@
 from domain.interfaces.repositories.i_country_repository import ICountryRepository
 from domain.models.country import Country as CountryList
 from database.db import SessionLocal
-from database.models import Country as DBCountry
+from database.models.country import Country as DBCountry
 
 class CountryRepository(ICountryRepository):
     def find_all_countries(self) -> list[CountryList]:

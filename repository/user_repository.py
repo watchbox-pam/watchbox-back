@@ -2,7 +2,7 @@ import datetime
 from typing import Optional
 
 from database.db import SessionLocal
-from database.models import User as DBUser
+from database.models.user import User as DBUser
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.models.user import User
 from domain.models.userPassword import UserPassword

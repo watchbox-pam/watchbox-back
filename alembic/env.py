@@ -2,7 +2,7 @@ from logging.config import fileConfig
 
 from alembic import context
 from database.db import Base
-from database.models import *
+from database.models.index import *
 from database.db import engine
 
 # this is the Alembic Config object, which provides

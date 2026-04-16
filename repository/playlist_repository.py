@@ -7,10 +7,10 @@ from domain.models.playlist import Playlist
 from domain.models.movie import MediaItem
 from domain.models.playlist_media import PlaylistMedia
 from database.db import SessionLocal
-from database.models import Playlist as DBPlaylist
-from database.models import User as DBUser
-from database.models import t_playlist_media
-from database.models import Movie as DBMovie
+from database.models.playlist import Playlist as DBPlaylist
+from database.models.user import User as DBUser
+from database.models.association_tables import t_playlist_media
+from database.models.movie import Movie as DBMovie
 from sqlalchemy import select, insert, delete
 
 class PlaylistRepository(IPlaylistRepository):

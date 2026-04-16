@@ -6,7 +6,8 @@ import db_config
 from domain.interfaces.repositories.i_review_repository import IReviewRepository
 from domain.models.review import Review, UserInfo
 from database.db import SessionLocal
-from database.models import t_review, User as DBUser
+from database.models.user import User as DBUser
+from database.models.association_tables import t_review
 
 
 class ReviewRepository(IReviewRepository):

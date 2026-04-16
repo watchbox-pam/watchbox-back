@@ -6,7 +6,7 @@ from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
 from database.db import SessionLocal
-from database.models import Movie as DBMovie
+from database.models.movie import Movie as DBMovie
 from sqlalchemy import func
 
 class MovieRepository(IMovieRepository):
