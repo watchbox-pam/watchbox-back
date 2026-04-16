@@ -18,3 +18,9 @@ class ISearchService(Protocol):
         Search only for actors/people matching the search term
         """
         ...
+
+    def get_suggestions(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
+        """
+        Get search suggestions for movies, TV shows, and people matching the search term and optional provider filters
+        """
+        ...

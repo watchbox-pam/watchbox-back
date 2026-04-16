@@ -18,7 +18,6 @@ def get_streaming_links(tmdb_id: int) -> dict:
         f"/title/{watchmode_id}/sources/",{
             "regions": "FR"
         })
-      print(f"[WATCHMODE] sources={sources[:2]}")
 
       result = {}
       for source in sources:
