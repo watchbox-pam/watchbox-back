@@ -122,7 +122,22 @@ class RecommendationRepository(IRecommendationRepository):
             print(e)
             return []
 
-    def get_all_implicit_feedback(self) -> List[dict]:  # 👈 ajouté
+    def get_swipe_movie_ids(self, user_id: str) -> List[int]:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT movie_id FROM public.swipe
+                        WHERE user_id = %s
+                          AND direction IN ('like', 'dislike')
+                          AND movie_id IS NOT NULL
+                    """, (user_id,))
+                    return [row[0] for row in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
+
+    def get_all_implicit_feedback(self) -> List[dict]:
         try:
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
@@ -132,8 +147,29 @@ class RecommendationRepository(IRecommendationRepository):
                         FROM public.playlist_media pm
                         JOIN public.playlist p ON p.id = pm.playlist_id
                         WHERE p.title IN ('Watchlist', 'Favoris')
+                        UNION ALL
+                        SELECT user_id, movie_id,
+                            CASE WHEN direction = 'like' THEN 1.5 ELSE -0.5 END as weight
+                        FROM public.swipe
+                        WHERE direction IN ('like', 'dislike')
+                          AND movie_id IS NOT NULL
                     """)
                     return [{"user_id": r[0], "movie_id": r[1], "weight": r[2]} for r in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
+
+    def get_skip_movie_ids(self, user_id: str) -> List[int]:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT movie_id FROM public.swipe
+                        WHERE user_id = %s
+                          AND direction = 'skip'
+                          AND movie_id IS NOT NULL
+                    """, (user_id,))
+                    return [row[0] for row in cur.fetchall()]
         except Exception as e:
             print(e)
             return []

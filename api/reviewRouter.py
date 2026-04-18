@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, BackgroundTasks, status
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
 
@@ -28,6 +28,7 @@ def get_review_repository() -> ReviewRepository:
 @review_router.post("")
 async def create_review(
     review: Review,
+    background_tasks: BackgroundTasks,
     service: IReviewService = Depends(get_review_service),
     repo: ReviewRepository = Depends(get_review_repository)
 ):
@@ -37,12 +38,10 @@ async def create_review(
             new_count = repo.increment_counter()
             if new_count >= TRAINING_THRESHOLD:
                 repo.reset_counter()
-                training_service = TrainingService(
-                    RecommendationRepository(),
-                    PlaylistRepository()
+                background_tasks.add_task(
+                    TrainingService(RecommendationRepository(), PlaylistRepository()).build_and_train
                 )
-                training_service.build_and_train()
-                print(f"Modèle réentraîné après {TRAINING_THRESHOLD} nouveaux ratings")
+                print(f"Réentraînement déclenché en arrière-plan après {TRAINING_THRESHOLD} nouveaux ratings")
             return True
         else:
             raise HTTPException(status_code=400, detail="La review n'a pas été ajoutée")

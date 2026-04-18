@@ -1,5 +1,5 @@
 import statistics
-import os
+from collections import defaultdict
 from typing import List
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
@@ -8,24 +8,19 @@ from domain.interfaces.services.i_recommendation_service import IRecommendationS
 from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
 from domain.models.movieReview import MovieReview
-from service.ml_service import MLService
+from service.ml_state import get_ml
 
 
 class RecommendationService(IRecommendationService):
     def __init__(self, repository: IRecommendationRepository, playlist_repository: IPlaylistRepository):
         self.repository = repository
         self.playlist_repository = playlist_repository
-        self.ml: MLService | None = None
-        if os.path.exists("ml_model.pkl"):
-            try:
-                self.ml = MLService.load("ml_model.pkl")
-            except:
-                self.ml = None
 
     def _get_adaptive_weights(self, user_id: str, rating_count: int) -> tuple:
-        if not self.ml or not self.ml.is_trained:
+        ml = get_ml()
+        if not ml or not ml.is_trained:
             return (0.0, 0.0, 1.0)
-        user_known = user_id in self.ml.user_index
+        user_known = user_id in ml.user_index
         if not user_known or rating_count < 5:
             return (0.05, 0.15, 0.80)
         elif rating_count < 20:
@@ -80,7 +75,8 @@ class RecommendationService(IRecommendationService):
         return selected
 
     def _is_cold_start(self, user_id: str, watchlist_ids: list, history_ids: list, favorites_ids: list) -> bool:
-        no_ml = not self.ml or user_id not in self.ml.user_index
+        ml = get_ml()
+        no_ml = not ml or user_id not in ml.user_index
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
@@ -103,7 +99,8 @@ class RecommendationService(IRecommendationService):
         if limit > 50:
             limit = 50
 
-        exclude_set = set(exclude_ids or [])
+        skip_ids = self.repository.get_skip_movie_ids(user_id)
+        exclude_set = set(exclude_ids or []) | set(skip_ids)
 
         user_playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
         user_watchlist_id = user_history_id = user_favorites_id = ""
@@ -121,47 +118,54 @@ class RecommendationService(IRecommendationService):
         user_favorites = self.playlist_repository.get_playlist_medias(user_favorites_id) or []
 
         watchlist_ids = [m.movie_id for m in user_watchlist]
-        history_ids = [m.movie_id for m in user_history]
+        playlist_history_ids = [m.movie_id for m in user_history]
+        swipe_ids = self.repository.get_swipe_movie_ids(user_id)
+        history_ids = list(dict.fromkeys(playlist_history_ids + swipe_ids))
         favorites_ids = [m.movie_id for m in user_favorites]
 
         if self._is_cold_start(user_id, watchlist_ids, history_ids, favorites_ids):
             print(f"Cold start détecté pour user {user_id}")
             return self._get_cold_start_recommendations(emotion, limit=limit)
 
-        keywords, actors, directors = [], [], []
+        kw_weights: dict = defaultdict(float)
+        actor_weights: dict = defaultdict(float)
+        director_weights: dict = defaultdict(float)
 
         if watchlist_ids:
             for media in self.repository.find_by_ids_recommendation(watchlist_ids):
                 for kw in media.keywords:
-                    keywords.append({"value": kw, "weight": 10})
+                    kw_weights[kw] += 10
                 for c in media.credits:
                     if c["job_id"] == "96":
-                        actors.append({"value": c["person_id"], "weight": 10})
+                        actor_weights[c["person_id"]] += 10
                     elif c["job_id"] == "537":
-                        directors.append({"value": c["person_id"], "weight": 10})
+                        director_weights[c["person_id"]] += 10
 
         if history_ids:
             history_reviews: List[MovieReview] = self.repository.find_with_review(user_id, history_ids)
+            review_map = defaultdict(list)
+            for r in history_reviews:
+                review_map[r.movie_id].append(r.rating)
             for media in self.repository.find_by_ids_recommendation(history_ids):
-                ratings = [r.rating for r in history_reviews if r.movie_id == media.id]
+                ratings = review_map[media.id]
                 w = (statistics.fmean(ratings) - 5) if ratings else 0
                 for kw in media.keywords:
-                    keywords.append({"value": kw, "weight": w})
+                    kw_weights[kw] += w
                 for c in media.credits:
                     if c["job_id"] == "96":
-                        actors.append({"value": c["person_id"], "weight": w})
+                        actor_weights[c["person_id"]] += w
                     elif c["job_id"] == "537":
-                        directors.append({"value": c["person_id"], "weight": w})
+                        director_weights[c["person_id"]] += w
 
         if favorites_ids:
             for media in self.repository.find_by_ids_recommendation(favorites_ids):
                 for kw in media.keywords:
-                    keywords.append({"value": kw, "weight": 20})
+                    kw_weights[kw] += 20
                 for c in media.credits:
                     if c["job_id"] == "96":
-                        actors.append({"value": c["person_id"], "weight": 20})
+                        actor_weights[c["person_id"]] += 20
                     elif c["job_id"] == "537":
-                        directors.append({"value": c["person_id"], "weight": 20})
+                        director_weights[c["person_id"]] += 20
 
         genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
 
@@ -178,21 +182,18 @@ class RecommendationService(IRecommendationService):
         if not genre_medias:
             return self._get_cold_start_recommendations(emotion, limit=limit)
 
+        watchlist_set = set(watchlist_ids)
         for media in genre_medias:
             media.weight = len(media.genres)
-
-            if media.id in watchlist_ids:
+            if media.id in watchlist_set:
                 media.weight += 10
             for kw in media.keywords:
-                for k in filter(lambda x: x["value"] == kw, keywords):
-                    media.weight += k["weight"]
+                media.weight += kw_weights.get(kw, 0)
             for c in media.credits:
                 if c["job_id"] == "96":
-                    for a in filter(lambda x: x["value"] == c["person_id"], actors):
-                        media.weight += a["weight"]
+                    media.weight += actor_weights.get(c["person_id"], 0)
                 elif c["job_id"] == "537":
-                    for d in filter(lambda x: x["value"] == c["person_id"], directors):
-                        media.weight += d["weight"] * 2
+                    media.weight += director_weights.get(c["person_id"], 0) * 2
 
         rating_count = len(history_ids)
         w_svd, w_als, w_content = self._get_adaptive_weights(user_id, rating_count)
@@ -201,9 +202,10 @@ class RecommendationService(IRecommendationService):
         svd_scores = {}
         als_scores = {}
 
-        if self.ml and self.ml.is_trained:
-            svd_scores = {mid: self.ml.predict_svd(user_id, mid) for mid in candidate_ids}
-            als_scores = self.ml.predict_als(user_id, candidate_ids)
+        ml = get_ml()
+        if ml and ml.is_trained:
+            svd_scores = {mid: ml.predict_svd(user_id, mid) for mid in candidate_ids}
+            als_scores = ml.predict_als(user_id, candidate_ids)
 
         for media in genre_medias:
             media.weight = (

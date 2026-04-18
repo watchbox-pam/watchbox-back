@@ -466,6 +466,20 @@ t_review = Table(
 )
 
 
+t_swipe = Table(
+    'swipe', Base.metadata,
+    Column('id', Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
+    Column('user_id', Uuid, nullable=False),
+    Column('movie_id', Integer),
+    Column('direction', String(10), nullable=False),
+    Column('created_at', DateTime, server_default=text('now()')),
+    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='swipe_movie_id_fkey'),
+    ForeignKeyConstraint(['user_id'], ['user.id'], name='swipe_user_id_fkey', ondelete='CASCADE'),
+    UniqueConstraint('user_id', 'movie_id', name='uq_swipe_user_movie'),
+    PrimaryKeyConstraint('id', name='swipe_pkey')
+)
+
+
 t_ml_training_counter = Table(
     'ml_training_counter', Base.metadata,
     Column('id', Integer, Identity(always=False, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
