@@ -77,3 +77,5 @@ class PopularMovieList:
 class MediaItem:
     id: int
     image: str
+    title: Optional[str] = None
+    release_date: Optional[date] = None

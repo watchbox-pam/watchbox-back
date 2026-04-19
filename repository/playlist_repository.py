@@ -213,7 +213,9 @@ class PlaylistRepository(IPlaylistRepository):
                 results = session.execute(
                     select(
                         DBMovie.id,
-                        DBMovie.poster_path
+                        DBMovie.poster_path,
+                        DBMovie.title,
+                        DBMovie.release_date,
                 ).select_from(
                         t_playlist_media.join(
                             DBMovie, t_playlist_media.c.movie_id == DBMovie.id
@@ -226,7 +228,9 @@ class PlaylistRepository(IPlaylistRepository):
                 for result in results:
                     media_data.append(MediaItem(
                         id=result.id,
-                        image=result.poster_path
+                        image=result.poster_path,
+                        title=result.title,
+                        release_date=result.release_date,
                     ))
 
         except Exception as e:
