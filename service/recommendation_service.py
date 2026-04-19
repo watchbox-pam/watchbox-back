@@ -80,8 +80,8 @@ class RecommendationService(IRecommendationService):
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
-    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10) -> List[MovieRecommendation]:
-        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
+    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False) -> List[MovieRecommendation]:
+        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion], include_adult)
         for media in genre_medias:
             media.weight = media.popularity
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
@@ -92,7 +92,8 @@ class RecommendationService(IRecommendationService):
         emotion: Emotion,
         user_id: str,
         limit: int = 10,
-        exclude_ids: list[int] | None = None
+        exclude_ids: list[int] | None = None,
+        include_adult: bool = False
     ):
         if limit < 1:
             limit = 1
@@ -125,7 +126,7 @@ class RecommendationService(IRecommendationService):
 
         if self._is_cold_start(user_id, watchlist_ids, history_ids, favorites_ids):
             print(f"Cold start détecté pour user {user_id}")
-            return self._get_cold_start_recommendations(emotion, limit=limit)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult)
 
         kw_weights: dict = defaultdict(float)
         actor_weights: dict = defaultdict(float)
@@ -167,7 +168,7 @@ class RecommendationService(IRecommendationService):
                     elif c["job_id"] == "537":
                         director_weights[c["person_id"]] += 20
 
-        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
+        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion], include_adult)
 
         # Exclure historique + exclude_ids
         history_set = set(history_ids)
@@ -180,7 +181,7 @@ class RecommendationService(IRecommendationService):
         candidate_ids = [m.id for m in genre_medias]
 
         if not genre_medias:
-            return self._get_cold_start_recommendations(emotion, limit=limit)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult)
 
         watchlist_set = set(watchlist_ids)
         for media in genre_medias:
