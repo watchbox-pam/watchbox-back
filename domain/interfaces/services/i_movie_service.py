@@ -17,5 +17,5 @@ class IMovieService(Protocol):
     def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
         ...
         
-    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
+    def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
         ...

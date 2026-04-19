@@ -1,5 +1,6 @@
 import statistics
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
@@ -80,8 +81,8 @@ class RecommendationService(IRecommendationService):
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
-    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10) -> List[MovieRecommendation]:
-        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
+    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False) -> List[MovieRecommendation]:
+        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion], include_adult)
         for media in genre_medias:
             media.weight = media.popularity
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
@@ -92,19 +93,29 @@ class RecommendationService(IRecommendationService):
         emotion: Emotion,
         user_id: str,
         limit: int = 10,
-        exclude_ids: list[int] | None = None
+        exclude_ids: list[int] | None = None,
+        include_adult: bool = False
     ):
         if limit < 1:
             limit = 1
         if limit > 50:
             limit = 50
 
-        skip_ids = self.repository.get_skip_movie_ids(user_id)
+        # Phase 1 : toutes les requêtes indépendantes en parallèle
+        with ThreadPoolExecutor() as ex:
+            f_skip      = ex.submit(self.repository.get_skip_movie_ids, user_id)
+            f_playlists = ex.submit(self.playlist_repository.get_playlists_by_user_id, user_id)
+            f_swipes    = ex.submit(self.repository.get_swipe_movie_ids, user_id)
+            f_genres    = ex.submit(self.repository.find_by_genres, EMOTION_GENRE_MAPPING[emotion], include_adult)
+
+        skip_ids       = f_skip.result()
+        user_playlists = f_playlists.result()
+        swipe_ids      = f_swipes.result()
+        genre_medias   = f_genres.result()
+
         exclude_set = set(exclude_ids or []) | set(skip_ids)
 
-        user_playlists = self.playlist_repository.get_playlists_by_user_id(user_id)
         user_watchlist_id = user_history_id = user_favorites_id = ""
-
         for item in user_playlists:
             if item.title == "Watchlist":
                 user_watchlist_id = str(item.id)
@@ -113,26 +124,38 @@ class RecommendationService(IRecommendationService):
             if item.title == "Favoris":
                 user_favorites_id = str(item.id)
 
-        user_watchlist = self.playlist_repository.get_playlist_medias(user_watchlist_id) or []
-        user_history = self.playlist_repository.get_playlist_medias(user_history_id) or []
-        user_favorites = self.playlist_repository.get_playlist_medias(user_favorites_id) or []
+        # Phase 2 : contenu des playlists en parallèle
+        with ThreadPoolExecutor() as ex:
+            f_watchlist  = ex.submit(self.playlist_repository.get_playlist_medias, user_watchlist_id)
+            f_history    = ex.submit(self.playlist_repository.get_playlist_medias, user_history_id)
+            f_favorites  = ex.submit(self.playlist_repository.get_playlist_medias, user_favorites_id)
 
-        watchlist_ids = [m.movie_id for m in user_watchlist]
+        user_watchlist = f_watchlist.result() or []
+        user_history   = f_history.result()   or []
+        user_favorites = f_favorites.result() or []
+
+        watchlist_ids       = [m.movie_id for m in user_watchlist]
         playlist_history_ids = [m.movie_id for m in user_history]
-        swipe_ids = self.repository.get_swipe_movie_ids(user_id)
-        history_ids = list(dict.fromkeys(playlist_history_ids + swipe_ids))
-        favorites_ids = [m.movie_id for m in user_favorites]
+        history_ids         = list(dict.fromkeys(playlist_history_ids + swipe_ids))
+        favorites_ids       = [m.movie_id for m in user_favorites]
 
         if self._is_cold_start(user_id, watchlist_ids, history_ids, favorites_ids):
             print(f"Cold start détecté pour user {user_id}")
-            return self._get_cold_start_recommendations(emotion, limit=limit)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult)
+
+        # Phase 3 : données de contenu en parallèle
+        with ThreadPoolExecutor() as ex:
+            f_wl_reco   = ex.submit(self.repository.find_by_ids_recommendation, watchlist_ids) if watchlist_ids else None
+            f_hist_reco = ex.submit(self.repository.find_by_ids_recommendation, history_ids)   if history_ids  else None
+            f_fav_reco  = ex.submit(self.repository.find_by_ids_recommendation, favorites_ids) if favorites_ids else None
+            f_reviews   = ex.submit(self.repository.find_with_review, user_id, history_ids)    if history_ids  else None
 
         kw_weights: dict = defaultdict(float)
         actor_weights: dict = defaultdict(float)
         director_weights: dict = defaultdict(float)
 
-        if watchlist_ids:
-            for media in self.repository.find_by_ids_recommendation(watchlist_ids):
+        if watchlist_ids and f_wl_reco:
+            for media in f_wl_reco.result():
                 for kw in media.keywords:
                     kw_weights[kw] += 10
                 for c in media.credits:
@@ -141,12 +164,12 @@ class RecommendationService(IRecommendationService):
                     elif c["job_id"] == "537":
                         director_weights[c["person_id"]] += 10
 
-        if history_ids:
-            history_reviews: List[MovieReview] = self.repository.find_with_review(user_id, history_ids)
+        if history_ids and f_hist_reco:
+            history_reviews: List[MovieReview] = f_reviews.result() if f_reviews else []
             review_map = defaultdict(list)
             for r in history_reviews:
                 review_map[r.movie_id].append(r.rating)
-            for media in self.repository.find_by_ids_recommendation(history_ids):
+            for media in f_hist_reco.result():
                 ratings = review_map[media.id]
                 w = (statistics.fmean(ratings) - 5) if ratings else 0
                 for kw in media.keywords:
@@ -157,8 +180,8 @@ class RecommendationService(IRecommendationService):
                     elif c["job_id"] == "537":
                         director_weights[c["person_id"]] += w
 
-        if favorites_ids:
-            for media in self.repository.find_by_ids_recommendation(favorites_ids):
+        if favorites_ids and f_fav_reco:
+            for media in f_fav_reco.result():
                 for kw in media.keywords:
                     kw_weights[kw] += 20
                 for c in media.credits:
@@ -166,8 +189,6 @@ class RecommendationService(IRecommendationService):
                         actor_weights[c["person_id"]] += 20
                     elif c["job_id"] == "537":
                         director_weights[c["person_id"]] += 20
-
-        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion])
 
         # Exclure historique + exclude_ids
         history_set = set(history_ids)
@@ -180,7 +201,7 @@ class RecommendationService(IRecommendationService):
         candidate_ids = [m.id for m in genre_medias]
 
         if not genre_medias:
-            return self._get_cold_start_recommendations(emotion, limit=limit)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult)
 
         watchlist_set = set(watchlist_ids)
         for media in genre_medias:
@@ -204,7 +225,7 @@ class RecommendationService(IRecommendationService):
 
         ml = get_ml()
         if ml and ml.is_trained:
-            svd_scores = {mid: ml.predict_svd(user_id, mid) for mid in candidate_ids}
+            svd_scores = ml.predict_svd_batch(user_id, candidate_ids)
             als_scores = ml.predict_als(user_id, candidate_ids)
 
         for media in genre_medias:

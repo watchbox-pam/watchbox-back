@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, List
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
@@ -32,16 +33,23 @@ class MovieService(IMovieService):
         self.watch_providers_repository = watch_providers_repository
 
     def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
-        movie = self.repository.find_by_id(movie_id)
-        release_dates = self.release_dates_repository.find_by_id(movie_id)
-        credits = self.credits_repository.find_by_id(movie_id)
-        videos = self.videos_repository.find_by_id(movie_id)
-        watch_providers = self.watch_providers_repository.find_by_id(movie_id)
+        with ThreadPoolExecutor() as executor:
+            f_movie          = executor.submit(self.repository.find_by_id, movie_id)
+            f_release_dates  = executor.submit(self.release_dates_repository.find_by_id, movie_id)
+            f_credits        = executor.submit(self.credits_repository.find_by_id, movie_id)
+            f_videos         = executor.submit(self.videos_repository.find_by_id, movie_id)
+            f_watch_providers = executor.submit(self.watch_providers_repository.find_by_id, movie_id)
+            f_deeplinks      = executor.submit(get_streaming_links, movie_id)
+
+        movie          = f_movie.result()
+        release_dates  = f_release_dates.result()
+        credits        = f_credits.result()
+        videos         = f_videos.result()
+        watch_providers = f_watch_providers.result()
+        deeplinks      = f_deeplinks.result()
 
         fr_data = watch_providers.results.get("FR", {})
         providers_link = fr_data.get("link", None)
-
-        deeplinks = get_streaming_links(movie_id)
 
         seen = set()
         france_providers = []
@@ -99,8 +107,8 @@ class MovieService(IMovieService):
     def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
         return self.repository.find_by_genre(genre)
 
-    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
-        movies = self.repository.get_random_movies(count)
+    def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
+        movies = self.repository.get_random_movies(count, include_adult)
         if not movies or len(movies) == 0:
             return None
         return movies

@@ -1,26 +1,14 @@
 from typing import Protocol, List, Optional, Dict, Any
 
 class ISearchRepository(Protocol):
-    def search_all(self, search_term: str, providers: Optional[List[int]] = None) -> Dict[str, List[Dict[str, Any]]]:
-        """
-        Search for movies, TV shows, and people matching the search term and optional provider filters
-        """
+    def search_all(self, search_term: str, providers: Optional[List[int]] = None, include_adult: bool = False) -> Dict[str, List[Dict[str, Any]]]:
         ...
 
-    def search_movies(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
-        """
-        Search only for movies matching the search term and optional provider filters
-        """
+    def search_movies(self, search_term: str, providers: Optional[List[int]] = None, include_adult: bool = False) -> List[Dict[str, Any]]:
         ...
 
-    def search_actors(self, search_term: str) -> List[Dict[str, Any]]:
-        """
-        Search only for actors/people matching the search term
-        """
+    def search_actors(self, search_term: str, include_adult: bool = False) -> List[Dict[str, Any]]:
         ...
 
-    def search_suggestions(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
-        """
-        Get search suggestions for movies, TV shows, and people matching the search term and optional provider filters
-        """
+    def search_suggestions(self, search_term: str, providers: Optional[List[int]] = None, include_adult: bool = False) -> List[Dict[str, Any]]:
         ...

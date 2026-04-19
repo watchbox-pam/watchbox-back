@@ -6,12 +6,9 @@ from utils.tmdb_service import call_tmdb_api
 
 class SearchRepository(ISearchRepository):
 
-    def search_all(self, search_term: str, providers: Optional[List[int]] = None) -> Dict[str, List[Dict[str, Any]]]:
-        """
-        Search for movies, TV shows, and people matching the search term and optional provider filters
-        """
-        movies = self.search_movies(search_term, providers)
-        people = self.search_actors(search_term)
+    def search_all(self, search_term: str, providers: Optional[List[int]] = None, include_adult: bool = False) -> Dict[str, List[Dict[str, Any]]]:
+        movies = self.search_movies(search_term, providers, include_adult)
+        people = self.search_actors(search_term, include_adult)
 
         return {
             "movies": movies,
@@ -19,11 +16,9 @@ class SearchRepository(ISearchRepository):
             "tv": []
         }
 
-    def search_movies(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
-        """
-        Search only for movies matching the search term and optional provider filters
-        """
-        endpoint = f"/search/movie?query={search_term}&language=fr-FR&page=1&include_adult=false"
+    def search_movies(self, search_term: str, providers: Optional[List[int]] = None, include_adult: bool = False) -> List[Dict[str, Any]]:
+        adult_str = "true" if include_adult else "false"
+        endpoint = f"/search/movie?query={search_term}&language=fr-FR&page=1&include_adult={adult_str}"
         result = call_tmdb_api(endpoint)
 
         movies = []
@@ -60,15 +55,13 @@ class SearchRepository(ISearchRepository):
 
         return movies
 
-    def search_actors(self, search_term: str) -> List[Dict[str, Any]]:
-        """
-        Search only for actors/people matching the search term
-        """
+    def search_actors(self, search_term: str, include_adult: bool = False) -> List[Dict[str, Any]]:
         people = []
         seen_ids = set()
+        adult_str = "true" if include_adult else "false"
 
         for page in range(1, 6):
-            endpoint = f"/search/person?query={search_term}&language=fr-FR&page={page}&include_adult=false"
+            endpoint = f"/search/person?query={search_term}&language=fr-FR&page={page}&include_adult={adult_str}"
             result = call_tmdb_api(endpoint)
 
             if "results" not in result or not result["results"]:
@@ -117,12 +110,9 @@ class SearchRepository(ISearchRepository):
         people.sort(key=lambda x: x['popularity'], reverse=True)
         return people
     
-    def search_suggestions(self, search_term: str, providers: Optional[List[int]] = None) -> List[Dict[str, Any]]:
-        """
-        Search for movies, TV shows, and people matching the search term and optional provider filters
-        Returns only top 5 results per category without overview to be used as search suggestions
-        """
-        endpoint = f"/search/multi?query={search_term}&language=fr-FR&page=1&include_adult=false"
+    def search_suggestions(self, search_term: str, providers: Optional[List[int]] = None, include_adult: bool = False) -> List[Dict[str, Any]]:
+        adult_str = "true" if include_adult else "false"
+        endpoint = f"/search/multi?query={search_term}&language=fr-FR&page=1&include_adult={adult_str}"
         results = call_tmdb_api(endpoint)
 
         suggestions = []

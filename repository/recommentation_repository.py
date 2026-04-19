@@ -47,7 +47,7 @@ class RecommendationRepository(IRecommendationRepository):
             print(e)
         return medias
 
-    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
+    def find_by_genres(self, genres: List[int], include_adult: bool = False) -> List[MovieRecommendation]:
         medias: List[MovieRecommendation] = []
         try:
             with db_config.connect_to_db() as conn:
@@ -62,9 +62,10 @@ class RecommendationRepository(IRecommendationRepository):
                              "INNER JOIN public.media_keyword mk ON mk.movie_id = m.id "
                              "INNER JOIN public.credit c ON c.movie_id = m.id "
                              "WHERE mg.genre_id = ANY(%s) "
-                             "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537))"
+                             "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537)) "
+                             "AND (%s OR m.adult IS NOT TRUE) "
                              "group by mg.movie_id, m.title;")
-                    cur.execute(query, (genres,))
+                    cur.execute(query, (genres, include_adult))
                     results = cur.fetchall()
                     if results is not None:
                         for result in results:

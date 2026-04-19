@@ -37,3 +37,6 @@ class IUserService(Protocol):
 
     def reset_user_password(self, new_password: UserPassword) -> bool:
         ...
+
+    def update_settings(self, user_id: str, adult_content: bool, is_private: bool, history_private: bool) -> bool:
+        ...
