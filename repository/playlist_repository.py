@@ -12,6 +12,8 @@ from database.models import User as DBUser
 from database.models import t_playlist_media
 from database.models import Movie as DBMovie
 from sqlalchemy import select, insert, delete
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from utils.tmdb_service import call_tmdb_api
 
 class PlaylistRepository(IPlaylistRepository):
     def create_playlist(self, playlist: Playlist) -> bool:
@@ -176,6 +178,28 @@ class PlaylistRepository(IPlaylistRepository):
 
         try:
             with SessionLocal() as session:
+                movie_exists = session.query(DBMovie.id).filter(DBMovie.id == media_id).first()
+                if not movie_exists:
+                    tmdb = call_tmdb_api(f"/movie/{media_id}?language=fr-FR")
+                    release_date_str = tmdb.get("release_date", "")
+                    release_date = datetime.date.fromisoformat(release_date_str) if release_date_str else None
+                    session.execute(
+                        pg_insert(DBMovie).values(
+                            id=tmdb["id"],
+                            title=tmdb.get("title"),
+                            poster_path=tmdb.get("poster_path"),
+                            backdrop_path=tmdb.get("backdrop_path"),
+                            overview=tmdb.get("overview"),
+                            release_date=release_date,
+                            adult=tmdb.get("adult"),
+                            original_language=tmdb.get("original_language"),
+                            original_title=tmdb.get("original_title"),
+                            runtime=tmdb.get("runtime"),
+                            popularity=tmdb.get("popularity"),
+                            infos_complete=False,
+                        ).on_conflict_do_nothing(index_elements=["id"])
+                    )
+
                 session.execute(
                     insert(t_playlist_media).values(
                         playlist_id=playlist_id,

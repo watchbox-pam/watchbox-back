@@ -42,7 +42,7 @@ class PlaylistService(IPlaylistService):
         try:
 
             if self.repository.media_exists_in_playlist(playlist_id, media_id):
-                raise HTTPException(status_code=400, detail="Le média est déjà présent dans la playlist.")
+                raise HTTPException(status_code=409, detail="Ce film est déjà dans cette playlist.")
 
             success = self.repository.add_media_to_playlist(playlist_id, media_id)
             if not success:
