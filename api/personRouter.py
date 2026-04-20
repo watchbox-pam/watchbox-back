@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
 
+from api.auth.verify_auth_token import get_adult_content
 from domain.interfaces.repositories.i_person_repository import IPersonRepository
 from domain.interfaces.services.i_person_service import IPersonService
 from service.person_service import PersonService
@@ -14,14 +15,15 @@ def get_person_service() -> IPersonService:
     return PersonService(repository)
 
 @person_router.get("/{person_id}")
-async def get_person_by_id(person_id: int, service: IPersonService = Depends(get_person_service)):
+async def get_person_by_id(person_id: int, include_adult: bool = Depends(get_adult_content), service: IPersonService = Depends(get_person_service)):
     """
-    Returns the details for a person based on the person id
-    :param person_id: the person id
-    :param service: the service to call to get the info
-    :return: the details of the person / or a 404 error if the id does not exist
-    """
-    person = service.find_by_id(person_id)
+        Returns the details for a person based on the person id
+        :param include_adult:
+        :param person_id: the person id
+        :param service: the service to call to get the info
+        :return: the details of the person / or a 404 error if the id does not exist
+        """
+    person = service.find_by_id(person_id, include_adult)
     if person:
         return person
     else:
