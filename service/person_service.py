@@ -7,8 +7,8 @@ class PersonService(IPersonService):
     def __init__(self, repository: IPersonRepository):
         self.repository = repository
 
-    def find_by_id(self, person_id: int) -> Optional[PersonDetail]:
-        person, combined_credits = self.repository.find_by_id(person_id)
+    def find_by_id(self, person_id: int, include_adult: bool) -> Optional[PersonDetail]:
+        person, combined_credits = self.repository.find_by_id(person_id, include_adult)
 
         return {
             "person": person,

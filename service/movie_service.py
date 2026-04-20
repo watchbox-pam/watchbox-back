@@ -32,11 +32,11 @@ class MovieService(IMovieService):
         self.videos_repository = videos_repository
         self.watch_providers_repository = watch_providers_repository
 
-    def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
+    def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[MovieDetail]:
         with ThreadPoolExecutor() as executor:
-            f_movie          = executor.submit(self.repository.find_by_id, movie_id)
+            f_movie          = executor.submit(self.repository.find_by_id, movie_id, include_adult)
             f_release_dates  = executor.submit(self.release_dates_repository.find_by_id, movie_id)
-            f_credits        = executor.submit(self.credits_repository.find_by_id, movie_id)
+            f_credits        = executor.submit(self.credits_repository.find_by_id, movie_id, include_adult)
             f_videos         = executor.submit(self.videos_repository.find_by_id, movie_id)
             f_watch_providers = executor.submit(self.watch_providers_repository.find_by_id, movie_id)
             f_deeplinks      = executor.submit(get_streaming_links, movie_id)
@@ -98,14 +98,14 @@ class MovieService(IMovieService):
             "providers_link": providers_link
         }
 
-    def search(self, search_term: str) -> Optional[list[Movie]]:
-        return self.repository.search(search_term)
+    def search(self, search_term: str, include_adult: bool) -> Optional[list[Movie]]:
+        return self.repository.search(search_term, include_adult)
 
-    def find_by_time_window(self, time_window: str, page: int) -> Optional[Movie]:
-        return self.repository.find_by_time_window(time_window, page)
+    def find_by_time_window(self, time_window: str, page: int, include_adult: bool) -> Optional[Movie]:
+        return self.repository.find_by_time_window(time_window, page, include_adult)
 
-    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
-        return self.repository.find_by_genre(genre)
+    def find_by_genre(self, genre: str, include_adult: bool) -> Optional[PopularMovieList]:
+        return self.repository.find_by_genre(genre, include_adult)
 
     def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
         movies = self.repository.get_random_movies(count, include_adult)
