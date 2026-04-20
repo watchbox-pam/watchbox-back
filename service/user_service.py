@@ -186,6 +186,9 @@ class UserService(IUserService):
             return ""
 
 
+    def update_settings(self, user_id: str, adult_content: bool, is_private: bool, history_private: bool) -> bool:
+        return self.repository.update_settings(user_id, adult_content, is_private, history_private)
+
     def reset_user_password(self, new_password: UserPassword) -> bool:
         # Hash user password with pepper
         pepper = os.getenv("PEPPER")

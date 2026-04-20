@@ -184,6 +184,20 @@ class UserRepository(IUserRepository):
             print(e)
             return False
 
+    def update_settings(self, user_id: str, adult_content: bool, is_private: bool, history_private: bool) -> bool:
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
+                if user is None:
+                    return False
+                user.adult_content = adult_content
+                user.is_private = is_private
+                user.history_private = history_private
+                session.commit()
+                return True
+        except Exception as e:
+            print(e)
+            return False
 
     def delete_user(self, user_id: str) -> bool:
         """

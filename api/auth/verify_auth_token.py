@@ -37,6 +37,11 @@ def check_jwt_token(token: str = Depends(oauth2_scheme)) -> str:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalide")
 
 
+def get_adult_content(user_id: str = Depends(check_jwt_token)) -> bool:
+    user = get_user_by_id(user_id)
+    return user.adult_content if user else False
+
+
 def get_user_by_id(id: str) -> Optional[User]:
     user: Optional[DBUser] = None
     try:

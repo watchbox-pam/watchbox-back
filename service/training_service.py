@@ -1,6 +1,7 @@
 from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from service.ml_service import MLService
+from service.ml_state import refresh_ml
 
 
 class TrainingService:
@@ -17,4 +18,5 @@ class TrainingService:
         ml.train(ratings, implicit_feedback)
         ml.save("ml_model.pkl")
         print("Modèle sauvegardé.")
+        refresh_ml()
         return ml

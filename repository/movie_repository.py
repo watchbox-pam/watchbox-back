@@ -104,13 +104,16 @@ class MovieRepository(IMovieRepository):
             print(f"[ERREUR] Exception dans movie_runtime : {e}")
             return 0
         
-    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
+    def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
 
         movies: List[DBMovie] = []
 
         try:
             with SessionLocal() as session:
-                results = session.query(DBMovie).order_by(func.random()).filter(DBMovie.popularity >= 70).limit(count).all()
+                query = session.query(DBMovie).filter(DBMovie.popularity >= 70)
+                if not include_adult:
+                    query = query.filter((DBMovie.adult == False) | (DBMovie.adult == None))
+                results = query.order_by(func.random()).limit(count).all()
                 for result in results:
                     movies.append(MovieListItem(
                         id=result.id,

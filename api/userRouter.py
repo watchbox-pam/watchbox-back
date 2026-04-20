@@ -130,6 +130,26 @@ async def delete_user(
             detail=str(error)
         )
 
+class UpdateSettingsRequest(BaseModel):
+    adult_content: bool
+    is_private: bool
+    history_private: bool
+
+@user_router.patch("/{id}/settings")
+async def update_settings(
+    id: str,
+    request: UpdateSettingsRequest,
+    user_id: str = Depends(check_jwt_token),
+    service: IUserService = Depends(get_user_service)
+):
+    if str(user_id) != id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    success = service.update_settings(id, request.adult_content, request.is_private, request.history_private)
+    if not success:
+        raise HTTPException(status_code=400, detail="Mise à jour des paramètres échouée")
+    return {"success": True}
+
+
 class ForgotPasswordRequest(BaseModel):
     email: str
 

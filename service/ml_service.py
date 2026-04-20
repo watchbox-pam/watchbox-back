@@ -93,32 +93,41 @@ class MLService:
         self.item_factors_als = Y
 
     def predict_svd(self, user_id: str, movie_id: int) -> float:
-        if self.user_factors_svd is None or self.item_factors_svd is None:
-            return 0.0
-        uid = self.user_index.get(user_id)
-        mid = self.movie_index.get(movie_id)
-        if uid is None or mid is None:
-            return 0.0
-        score = float(np.dot(self.user_factors_svd[uid], self.item_factors_svd[mid]))
-        return max(0.0, min(1.0, score / 10.0))
+        return self.predict_svd_batch(user_id, [movie_id]).get(movie_id, 0.0)
 
-    def predict_als(self, user_id: str, movie_ids: List[int]) -> Dict[int, float]:
-        if self.user_factors_als is None or self.item_factors_als is None:
-            return {mid: 0.0 for mid in movie_ids}
+    def predict_svd_batch(self, user_id: str, movie_ids: List[int]) -> Dict[int, float]:
+        result = {mid: 0.0 for mid in movie_ids}
+        if self.user_factors_svd is None or self.item_factors_svd is None:
+            return result
         uid = self.user_index.get(user_id)
         if uid is None:
-            return {mid: 0.0 for mid in movie_ids}
+            return result
+        ids_arr = np.array(movie_ids)
+        indices = np.array([self.movie_index.get(mid, -1) for mid in movie_ids])
+        valid = indices >= 0
+        if valid.any():
+            scores = self.item_factors_svd[indices[valid]] @ self.user_factors_svd[uid]
+            scores = np.clip(scores / 10.0, 0.0, 1.0)
+            for mid, score in zip(ids_arr[valid].tolist(), scores.tolist()):
+                result[mid] = score
+        return result
 
-        scores = {}
-        user_vector = self.user_factors_als[uid]
-        for movie_id in movie_ids:
-            mid = self.movie_index.get(movie_id)
-            if mid is not None:
-                score = float(np.dot(user_vector, self.item_factors_als[mid]))
-                scores[movie_id] = max(0.0, min(1.0, score))
-            else:
-                scores[movie_id] = 0.0
-        return scores
+    def predict_als(self, user_id: str, movie_ids: List[int]) -> Dict[int, float]:
+        result = {mid: 0.0 for mid in movie_ids}
+        if self.user_factors_als is None or self.item_factors_als is None:
+            return result
+        uid = self.user_index.get(user_id)
+        if uid is None:
+            return result
+        ids_arr = np.array(movie_ids)
+        indices = np.array([self.movie_index.get(mid, -1) for mid in movie_ids])
+        valid = indices >= 0
+        if valid.any():
+            scores = self.item_factors_als[indices[valid]] @ self.user_factors_als[uid]
+            scores = np.clip(scores, 0.0, 1.0)
+            for mid, score in zip(ids_arr[valid].tolist(), scores.tolist()):
+                result[mid] = score
+        return result
 
     def save(self, path: str = "ml_model.pkl"):
         with open(path, "wb") as f:
