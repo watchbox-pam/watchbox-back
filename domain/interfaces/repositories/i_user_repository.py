@@ -36,3 +36,6 @@ class IUserRepository(Protocol):
 
     def update_settings(self, user_id: str, adult_content: bool, is_private: bool, history_private: bool) -> bool:
         ...
+
+    def get_password_reset_token(self, user_id: str) -> str:
+        ...

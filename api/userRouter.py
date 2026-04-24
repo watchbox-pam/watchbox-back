@@ -181,3 +181,12 @@ async def reset_password(new_password: UserPassword, service: IUserService = Dep
         return result
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.get("/{id}/password_reset_token")
+async def get_reset_password_token(id: str, service: IUserService = Depends(get_user_service)):
+    try:
+        result = service.get_password_reset_token(id)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
