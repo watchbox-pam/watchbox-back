@@ -204,3 +204,6 @@ class UserService(IUserService):
         update_result = self.repository.update_user_password(new_password)
 
         return update_result
+
+    def get_password_reset_token(self, user_id: str) -> str:
+        return self.repository.get_password_reset_token(user_id)
