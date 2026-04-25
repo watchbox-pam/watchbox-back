@@ -48,16 +48,10 @@ async def login_user(user: UserLogin, service: IUserService = Depends(get_user_s
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@user_router.get("/{id}", dependencies=[Depends(check_jwt_token)])
-async def get_user_by_id(id: str, service: IUserService = Depends(get_user_service)):
+@user_router.get("/profile")
+async def get_user_by_id(user_id: str = Depends(check_jwt_token), service: IUserService = Depends(get_user_service)):
     try:
-        # Validate UUID format
-        try:
-            uuid_obj = uuid.UUID(id)
-            id_str = str(uuid_obj)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Format d'ID utilisateur invalide")
-
+        id_str: str = str(user_id)
         user = service.get_user_by_id(id_str)
         if user:
             return {
@@ -75,9 +69,11 @@ async def get_user_by_id(id: str, service: IUserService = Depends(get_user_servi
             }
         else:
             raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
-    except HTTPException:
+    except HTTPException as error:
+        print(f"error 2 is {error}")
         raise
     except Exception as error:
+        print(f"error 3 is {error}")
         raise HTTPException(status_code=400, detail=str(error))
 
 
@@ -92,23 +88,14 @@ async def verify_user(user_verification: UserVerification, service: IUserService
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@user_router.delete("/{id}")
+@user_router.delete("")
 async def delete_user(
-    id: str,
     user_id: str = Depends(check_jwt_token),
     service: IUserService = Depends(get_user_service)
 ):
 
     try:
-        try:
-            uuid_obj = uuid.UUID(id)
-            id_str = str(uuid_obj)
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Format d'ID utilisateur invalide"
-            )
-
+        id_str: str = str(user_id)
         success = service.delete_user(id_str)
 
         if success:
@@ -135,16 +122,13 @@ class UpdateSettingsRequest(BaseModel):
     is_private: bool
     history_private: bool
 
-@user_router.patch("/{id}/settings")
+@user_router.patch("/settings")
 async def update_settings(
-    id: str,
     request: UpdateSettingsRequest,
     user_id: str = Depends(check_jwt_token),
     service: IUserService = Depends(get_user_service)
 ):
-    if str(user_id) != id:
-        raise HTTPException(status_code=403, detail="Accès non autorisé")
-    success = service.update_settings(id, request.adult_content, request.is_private, request.history_private)
+    success = service.update_settings(user_id, request.adult_content, request.is_private, request.history_private)
     if not success:
         raise HTTPException(status_code=400, detail="Mise à jour des paramètres échouée")
     return {"success": True}
@@ -183,10 +167,10 @@ async def reset_password(new_password: UserPassword, service: IUserService = Dep
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@user_router.get("/{id}/password_reset_token")
-async def get_reset_password_token(id: str, service: IUserService = Depends(get_user_service)):
+@user_router.get("/password_reset_token")
+async def get_reset_password_token(user_id: str = Depends(check_jwt_token), service: IUserService = Depends(get_user_service)):
     try:
-        result = service.get_password_reset_token(id)
+        result = service.get_password_reset_token(user_id)
         return result
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
