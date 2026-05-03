@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
 
@@ -22,3 +23,10 @@ class User:
     password_reset_token: str
     last_connection: datetime
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class UserSearchResult:
+    id: uuid.UUID
+    username: str
+    profile_picture_path: str
