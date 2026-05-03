@@ -11,7 +11,7 @@ def get_provider_service() -> IProviderService:
     repository = ProviderRepository()
     return ProviderService(repository)
 
-@provider_router.get("/")
+@provider_router.get("")
 async def get_providers(service: IProviderService = Depends(get_provider_service)) -> List[Dict[str, Any]]:
     """
     Get all available streaming providers from TMDB
