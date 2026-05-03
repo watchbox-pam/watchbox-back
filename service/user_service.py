@@ -12,6 +12,7 @@ from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
 from domain.models.user import User
 from domain.models.userLogin import UserLogin
+from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
 from utils.mail_service import send_mail
@@ -146,3 +147,63 @@ class UserService(IUserService):
 
         except Exception as e:
             raise Exception(f"Erreur lors de la suppression: {str(e)}")
+
+
+    def send_password_reset_email(self, email: str) -> bool:
+        """
+        Send a password reset email
+        :param email: The email of the user
+        :return: success of the operation
+        """
+        user_exists = self.get_user_by_email(email)
+
+        if user_exists is None:
+            raise Exception("Utilisateur non trouvé")
+
+        password_reset_token = user_exists.password_reset_token
+        url = f"https://app.watchbox-app.fr/resetPassword/{password_reset_token}"
+
+        try:
+            html = f"""\
+            <b>Bonjour, {user_exists.username}</b><br/>
+            Voici le <a href="{url}">lien</a> pour réinitialiser votre mot de passe watchbox
+            """
+            send_mail(email, "Réinitialisation de votre mot de passe Watchbox", html)
+
+            return True
+
+        except Exception as e:
+            print(e)
+            return False
+
+
+    def check_password_reset_token(self, password_reset_token: str) -> str:
+        try:
+            user_id = self.repository.check_password_reset_token(password_reset_token)
+            return user_id
+        except Exception as e:
+            print(e)
+            return ""
+
+
+    def update_settings(self, user_id: str, adult_content: bool, is_private: bool, history_private: bool) -> bool:
+        return self.repository.update_settings(user_id, adult_content, is_private, history_private)
+
+    def reset_user_password(self, new_password: UserPassword) -> bool:
+        # Hash user password with pepper
+        pepper = os.getenv("PEPPER")
+        hashed_password = sha256((new_password.password + pepper).encode('utf-8'))
+        new_password.password = hashed_password.hexdigest()
+
+        # Generate password reset token
+        password_reset_token_uuid = uuid.uuid4()
+        hashed_password_reset_token = sha256(str(password_reset_token_uuid).encode('utf-8'))
+        password_reset_token = hashed_password_reset_token.hexdigest()
+        new_password.token = password_reset_token
+
+        update_result = self.repository.update_user_password(new_password)
+
+        return update_result
+
+    def get_password_reset_token(self, user_id: str) -> str:
+        return self.repository.get_password_reset_token(user_id)

@@ -1,8 +1,8 @@
-"""baseline
+"""initial
 
-Revision ID: 41c93823204c
+Revision ID: 8c6de4d1e9d6
 Revises: 
-Create Date: 2026-02-18 14:45:52.092851
+Create Date: 2026-03-18 13:15:28.854113
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '41c93823204c'
+revision: str = '8c6de4d1e9d6'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,6 +24,7 @@ def upgrade() -> None:
     op.create_table('country',
     sa.Column('iso', sa.String(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
+    sa.Column('exists', sa.Boolean(), server_default=sa.text('true'), nullable=False),
     sa.PrimaryKeyConstraint('iso', name='country_pkey'),
     sa.UniqueConstraint('name', name='country_name_key')
     )
@@ -60,6 +61,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('logo', sa.String(), nullable=True),
+    sa.Column('display_priority', sa.Integer(), nullable=True),
     sa.PrimaryKeyConstraint('id', name='media_provider_pkey')
     )
     op.create_table('movie',
@@ -139,8 +141,7 @@ def upgrade() -> None:
     sa.Column('movie_id', sa.Integer(), nullable=True),
     sa.Column('tv_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['keyword_id'], ['keyword.id'], name='media_keyword_keyword_id_fkey'),
-    sa.ForeignKeyConstraint(['movie_id'], ['movie.id'], name='media_keyword_movie_id_fkey'),
-    sa.ForeignKeyConstraint(['tv_id'], ['tv.id'], name='media_keyword_tv_id_fkey')
+    sa.ForeignKeyConstraint(['movie_id'], ['movie.id'], name='media_keyword_movie_id_fkey')
     )
     op.create_table('media_language',
     sa.Column('movie_id', sa.Integer(), nullable=True),
@@ -230,9 +231,13 @@ def upgrade() -> None:
     sa.Column('last_connection', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('salt', sa.String(length=32), nullable=False),
+    sa.Column('is_verified', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('country', sa.String(), nullable=True),
     sa.Column('profile_picture_path', sa.String(length=256), nullable=True, comment="Chemin vers l'image de profil de l'utilisateur"),
-    sa.Column('banner_path', sa.String(length=256), nullable=True, comment="Chemin vers la bannière de l'utilisateur"),
+    sa.Column('banner_path', sa.String(length=256), nullable=True, comment="Chemin vers la banniere de l'utilisateur"),
+    sa.Column('password_reset_token', sa.String(), nullable=True),
+    sa.Column('verification_code', sa.String(), nullable=True),
+    sa.Column('verification_code_token', sa.String(), nullable=True),
     sa.ForeignKeyConstraint(['country'], ['country.iso'], name='user_country_fkey'),
     sa.PrimaryKeyConstraint('id', name='user_pkey'),
     sa.UniqueConstraint('email', name='user_email_key'),
@@ -275,22 +280,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['season_id'], ['tv_season.id'], name='tv_episode_season_id_fkey'),
     sa.PrimaryKeyConstraint('id', name='tv_episode_pkey')
     )
-    op.create_table('comment',
-    sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('rating', sa.Integer(), nullable=False),
-    sa.Column('content', sa.Text(), nullable=False, comment='Contenu du commentaire'),
-    sa.Column('has_spoiler_warning', sa.Boolean(), nullable=False),
-    sa.Column('user_id', sa.Uuid(), nullable=False),
-    sa.Column('movie_id', sa.Integer(), nullable=True),
-    sa.Column('tv_id', sa.Integer(), nullable=True),
-    sa.Column('tv_episode_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
-    sa.ForeignKeyConstraint(['movie_id'], ['movie.id'], name='comment_movie_id_fkey'),
-    sa.ForeignKeyConstraint(['tv_episode_id'], ['tv_episode.id'], name='comment_tv_episode_id_fkey'),
-    sa.ForeignKeyConstraint(['tv_id'], ['tv.id'], name='comment_tv_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey'),
-    sa.PrimaryKeyConstraint('id', name='comment_pkey')
-    )
     op.create_table('credit',
     sa.Column('tv_id', sa.Integer(), nullable=True),
     sa.Column('tv_season_id', sa.String(), nullable=True),
@@ -314,8 +303,22 @@ def upgrade() -> None:
     sa.Column('add_date', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['movie_id'], ['movie.id'], name='playlist_media_movie_id_fkey'),
     sa.ForeignKeyConstraint(['playlist_id'], ['playlist.id'], name='playlist_media_playlist_id_fkey'),
-    sa.ForeignKeyConstraint(['tv_id'], ['tv.id'], name='playlist_media_tv_id_fkey'),
-    sa.PrimaryKeyConstraint('playlist_id', name='playlist_media_pkey')
+    sa.ForeignKeyConstraint(['tv_id'], ['tv.id'], name='playlist_media_tv_id_fkey')
+    )
+    op.create_table('review',
+    sa.Column('rating', sa.Integer(), nullable=False),
+    sa.Column('comment', sa.Text(), nullable=True, comment='Contenu du commentaire'),
+    sa.Column('has_spoiler_warning', sa.Boolean(), nullable=False),
+    sa.Column('movie_id', sa.Integer(), nullable=True),
+    sa.Column('tv_id', sa.Integer(), nullable=True),
+    sa.Column('tv_episode_id', sa.Integer(), nullable=True),
+    sa.Column('user_id', sa.Uuid(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('id', sa.Integer(), sa.Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
+    sa.ForeignKeyConstraint(['movie_id'], ['movie.id'], name='comment_movie_id_fkey'),
+    sa.ForeignKeyConstraint(['tv_episode_id'], ['tv_episode.id'], name='comment_tv_episode_id_fkey'),
+    sa.ForeignKeyConstraint(['tv_id'], ['tv.id'], name='comment_tv_id_fkey'),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey')
     )
     # ### end Alembic commands ###
 
@@ -323,9 +326,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('review')
     op.drop_table('playlist_media')
     op.drop_table('credit')
-    op.drop_table('comment')
     op.drop_table('tv_episode')
     op.drop_table('tv_created_by')
     op.drop_table('playlist')

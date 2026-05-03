@@ -1,5 +1,6 @@
 from typing import Protocol, Optional
 
+from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.user import User
 from domain.models.userVerification import UserVerification
@@ -25,4 +26,16 @@ class IUserRepository(Protocol):
         ...
 
     def delete_user(self, user_id: str) -> bool:
+        ...
+
+    def check_password_reset_token(self, password_reset_token: str) -> str:
+        ...
+
+    def update_user_password(self, new_password: UserPassword) -> bool:
+        ...
+
+    def update_settings(self, user_id: str, adult_content: bool, is_private: bool, history_private: bool) -> bool:
+        ...
+
+    def get_password_reset_token(self, user_id: str) -> str:
         ...

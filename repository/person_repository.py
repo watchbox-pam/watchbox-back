@@ -6,7 +6,7 @@ from utils.tmdb_service import call_tmdb_api
 from domain.models.combined_credits import CombinedCredits
 
 class PersonRepository(IPersonRepository):
-    def find_by_id(self, person_id: int) -> Optional[PersonDetail]:
+    def find_by_id(self, person_id: int, include_adult: bool) -> Optional[PersonDetail]:
         endpoint = f"/person/{person_id}?append_to_response=combined_credits&language=fr-FR"
 
         result = call_tmdb_api(endpoint)
@@ -20,7 +20,6 @@ class PersonRepository(IPersonRepository):
             "place_of_birth": result["place_of_birth"],
             "profile_path": result["profile_path"],
         }
-        
 
         refactored_cast = [
             {
@@ -30,7 +29,7 @@ class PersonRepository(IPersonRepository):
                 "media_type": item.get("media_type"),
                 "popularity": item.get("popularity")
             }
-            for item in result["combined_credits"]["cast"]
+            for item in result["combined_credits"]["cast"] if include_adult or not item["adult"]
         ]
         refactored_cast = sorted(refactored_cast, key=lambda x: x.get("popularity", 0), reverse=True)
 
@@ -42,7 +41,7 @@ class PersonRepository(IPersonRepository):
                 "media_type": item.get("media_type"),
                 "popularity": item.get("popularity")
             }
-            for item in result["combined_credits"]["crew"]
+            for item in result["combined_credits"]["crew"] if include_adult or not item["adult"]
         ]
         refactored_crew = sorted(refactored_crew, key=lambda x: x.get("popularity", 0), reverse=True)
 

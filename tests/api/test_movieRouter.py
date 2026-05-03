@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch
 
 from api.movieRouter import movie_router, get_movie_service
+from api.auth.verify_auth_token import get_adult_content
 from domain.models.movie import Movie, MovieDetail, PopularMovieList
 
 
@@ -85,13 +86,7 @@ def test_app(mock_movie_service):
 
     # Injection de dépendances pour utiliser le service simulé
     app.dependency_overrides[get_movie_service] = get_test_movie_service
-
-    # Middleware pour simuler un utilisateur authentifié
-    @app.middleware("http")
-    async def mock_auth_middleware(request, call_next):
-        request.state.user = {"id": "test-user-id"}
-        response = await call_next(request)
-        return response
+    app.dependency_overrides[get_adult_content] = lambda: False
 
     # Inclure le routeur pour les films
     app.include_router(movie_router)
@@ -117,7 +112,7 @@ class TestMovieRouter:
         assert movie_data["title"] == "Test Movie FR"
         assert movie_data["age_restriction"] == "12"
         assert movie_data["video_key"] == "video_key"
-        mock_movie_service.find_by_id.assert_called_once_with(123)
+        mock_movie_service.find_by_id.assert_called_once_with(123, False)
 
     # Test de la route pour récupérer un film par ID qui n'existe pas
     def test_get_movie_by_id_not_found(self, client, mock_movie_service):
@@ -128,7 +123,7 @@ class TestMovieRouter:
         # Vérification que la réponse est une erreur 404
         assert response.status_code == 404
         assert response.json()["detail"] == "Movie not found"
-        mock_movie_service.find_by_id.assert_called_once_with(999)
+        mock_movie_service.find_by_id.assert_called_once_with(999, False)
 
     # Test de la route de recherche de films
     def test_search_movies(self, client, mock_movie_service):
@@ -140,7 +135,7 @@ class TestMovieRouter:
         assert len(movies) == 1
         assert movies[0]["id"] == 123
         assert movies[0]["title"] == "Test Movie FR"
-        mock_movie_service.search.assert_called_once_with("Test Movie")
+        mock_movie_service.search.assert_called_once_with("Test Movie", False)
 
     # Test de la recherche de films qui ne trouve rien
     def test_search_movies_not_found(self, client, mock_movie_service):
@@ -151,7 +146,7 @@ class TestMovieRouter:
         # Vérification que la recherche retourne une erreur 404
         assert response.status_code == 404
         assert response.json()["detail"] == "Movies not found"
-        mock_movie_service.search.assert_called_once_with("NonExistentMovie")
+        mock_movie_service.search.assert_called_once_with("NonExistentMovie", False)
 
     # Test de la route pour récupérer les films populaires selon une période
     def test_get_movie_by_time_window(self, client, mock_movie_service):
@@ -163,7 +158,7 @@ class TestMovieRouter:
         assert data["page"] == 1
         assert len(data["results"]) == 1
         assert data["results"][0]["id"] == 123
-        mock_movie_service.find_by_time_window.assert_called_once_with("week", 1)
+        mock_movie_service.find_by_time_window.assert_called_once_with("week", 1, False)
 
     # Test de la récupération de films populaires selon une période avec un résultat vide
     def test_get_movie_by_time_window_not_found(self, client, mock_movie_service):
@@ -174,4 +169,4 @@ class TestMovieRouter:
         # Vérification que la réponse est une erreur 404
         assert response.status_code == 404
         assert response.json()["detail"] == "Movies not found"
-        mock_movie_service.find_by_time_window.assert_called_once_with("decade", 1)
+        mock_movie_service.find_by_time_window.assert_called_once_with("decade", 1, False)

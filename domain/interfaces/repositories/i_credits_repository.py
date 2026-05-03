@@ -4,5 +4,5 @@ from domain.models.credits import Credits
 
 
 class ICreditsRepository(Protocol):
-    def find_by_id(self, movie_id: int) -> Optional[Credits]:
+    def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[Credits]:
         ...

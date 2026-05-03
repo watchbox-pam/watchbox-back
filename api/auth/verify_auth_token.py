@@ -3,6 +3,8 @@ from typing import Optional
 import jwt
 import os
 
+from database.db import SessionLocal
+from database.models import User as DBUser
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
@@ -35,43 +37,42 @@ def check_jwt_token(token: str = Depends(oauth2_scheme)) -> str:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalide")
 
 
+def get_adult_content(user_id: str = Depends(check_jwt_token)) -> bool:
+    user = get_user_by_id(user_id)
+    return user.adult_content if user else False
+
+
 def get_user_by_id(id: str) -> Optional[User]:
-    user: Optional[User] = None
+    user: Optional[DBUser] = None
     try:
-        with db_config.connect_to_db() as conn:
+        with SessionLocal() as session:
+            result = session.query(DBUser).filter(DBUser.id == id).first()
 
-            with conn.cursor() as cur:
+            if result is not None:
+                user = DBUser(
+                    id=result.id,
+                    username=result.username,
+                    email=result.email,
+                    password=result.password,
+                    birthdate=result.birthdate,
+                    is_private=result.is_private,
+                    history_private=result.history_private,
+                    adult_content=result.adult_content,
+                    last_connection=result.last_connection,
+                    created_at=result.created_at,
+                    salt=result.salt,
+                    country=result.country,
+                    profile_picture_path=result.profile_picture_path,
+                    banner_path=result.banner_path,
+                    is_verified=result.is_verified,
+                    password_reset_token=result.password_reset_token,
+                    verification_code=result.verification_code,
+                    verification_code_token=result.verification_code_token,
+                    country_=result.country_,
+                    playlist=result.playlist
+                )
 
-                cur.execute("""SELECT id, username, email, password, birthdate, is_private, 
-                                   history_private, adult_content, last_connection, created_at,
-                                   salt, country, profile_picture_path, banner_path, is_verified,
-                                   password_reset_token, verification_code, verification_code_token FROM public.user WHERE id=%s;""", (id,))
-
-                result = cur.fetchone()
-
-                if result is not None:
-                    user = User(
-                        id=result[0],
-                        username=result[1],
-                        email=result[2],
-                        password=result[3],
-                        birthdate=result[4],
-                        is_private=result[5],
-                        history_private=result[6],
-                        adult_content=result[7],
-                        last_connection=result[8],
-                        created_at=result[9],
-                        salt=result[10],
-                        country=result[11],
-                        profile_picture_path=result[12],
-                        banner_path=result[13],
-                        is_verified=result[14],
-                        password_reset_token=result[15],
-                        verification_code=result[16],
-                        verification_code_token=result[17]
-                    )
-
-    except (Exception) as e:
+    except Exception as e:
         print(e)
 
     return user

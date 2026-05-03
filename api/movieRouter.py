@@ -2,6 +2,8 @@ from fastapi import APIRouter
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
 
+from api.auth.verify_auth_token import get_adult_content
+
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
 from repository.movie_repository import MovieRepository
@@ -26,14 +28,15 @@ def get_movie_service() -> IMovieService:
     return MovieService(repository, release_dates_repository, credits_repository, videos_repository, watch_providers_repository)
 
 @movie_router.get("/id/{movie_id}")
-async def get_movie_by_id(movie_id: int, service: IMovieService = Depends(get_movie_service)):
+async def get_movie_by_id(movie_id: int, include_adult: bool = Depends(get_adult_content), service: IMovieService = Depends(get_movie_service)):
     """
-    Returns the details for a movie based on the movie id
-    :param movie_id: the movie id to get
-    :param service: the service to call to get the info
-    :return: the details of the movie / or a 404 error if the id does not exist
-    """
-    movie = service.find_by_id(movie_id)
+        Returns the details for a movie based on the movie id
+        :param include_adult:
+        :param movie_id: the movie id to get
+        :param service: the service to call to get the info
+        :return: the details of the movie / or a 404 error if the id does not exist
+        """
+    movie = service.find_by_id(movie_id, include_adult)
     if movie:
         return movie
     else:
@@ -41,8 +44,8 @@ async def get_movie_by_id(movie_id: int, service: IMovieService = Depends(get_mo
 
 
 @movie_router.get("/search/{search}")
-async def search_movies(search: str, service: IMovieService = Depends(get_movie_service)):
-    movies = service.search(search)
+async def search_movies(search: str, include_adult: bool = Depends(get_adult_content), service: IMovieService = Depends(get_movie_service)):
+    movies = service.search(search, include_adult)
     if movies is not None:
         return movies
     else:
@@ -50,14 +53,16 @@ async def search_movies(search: str, service: IMovieService = Depends(get_movie_
 
 
 @movie_router.get("/popular/{time_window}")
-async def get_movie_by_time_window(time_window: str, page: int = 1, service: IMovieService = Depends(get_movie_service)):
+async def get_movie_by_time_window(time_window: str, page: int = 1, include_adult: bool = Depends(get_adult_content), service: IMovieService = Depends(get_movie_service)):
     """
-    Returns the details for a movie based on the movie id
-    :param movie_id: the movie id to get
-    :param service: the service to call to get the info
-    :return: the details of the movie / or a 404 error if the id does not exist
-    """
-    movies = service.find_by_time_window(time_window, page)
+        Returns the details for a movie based on the movie id
+        :param include_adult:
+        :param page:
+        :param time_window:
+        :param service: the service to call to get the info
+        :return: the details of the movie / or a 404 error if the id does not exist
+        """
+    movies = service.find_by_time_window(time_window, page, include_adult)
     if movies:
         return movies
     else:
@@ -65,8 +70,8 @@ async def get_movie_by_time_window(time_window: str, page: int = 1, service: IMo
 
 
 @movie_router.get("/genres/{genre}")
-async def get_movie_by_genre(genre: str, service: IMovieService = Depends(get_movie_service)):
-    movies = service.find_by_genre(genre)
+async def get_movie_by_genre(genre: str, include_adult: bool = Depends(get_adult_content), service: IMovieService = Depends(get_movie_service)):
+    movies = service.find_by_genre(genre, include_adult)
     if movies:
         return movies
     else:
@@ -75,10 +80,11 @@ async def get_movie_by_genre(genre: str, service: IMovieService = Depends(get_mo
 @movie_router.get("/random")
 async def get_random_movies(
     count: int = 50,
+    include_adult: bool = Depends(get_adult_content),
     service: IMovieService = Depends(get_movie_service)
 ):
     print(f"count demandé : {count}")
-    movies = service.get_random_movies(count)
+    movies = service.get_random_movies(count, include_adult)
     print(f"movies récupérés : {movies}")
     if movies:
         return movies

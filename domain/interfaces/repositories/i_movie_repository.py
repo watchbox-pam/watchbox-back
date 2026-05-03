@@ -8,20 +8,20 @@ from domain.models.movie_list_item import MovieListItem
 
 
 class IMovieRepository(Protocol):
-    def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
+    def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[MovieDetail]:
         ...
 
-    def search(self, search_term: str) -> Optional[list[Movie]]:
+    def search(self, search_term: str, include_adult: bool) -> Optional[list[Movie]]:
         ...
 
-    def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
+    def find_by_time_window(self, time_window: str, page: int, include_adult: bool) -> Optional[PopularMovieList]:
         ...
 
     def movie_runtime(self, movie_ids: List[int]) -> int:
         ...
 
-    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
+    def find_by_genre(self, genre: str, include_adult: bool) -> Optional[PopularMovieList]:
         ...
 
-    def get_random_movies(self, count: int = 50) -> Optional[List[MovieListItem]]:
+    def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
         ...

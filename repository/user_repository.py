@@ -1,12 +1,13 @@
 import datetime
 from typing import Optional
 
-import db_config
+from database.db import SessionLocal
+from database.models import User as DBUser
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.models.user import User
+from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
-
 
 class UserRepository(IUserRepository):
     def create_user(self, user: UserSignup, password_reset_token: str, verification_code: str, verification_code_token: str) -> bool:
@@ -14,19 +15,32 @@ class UserRepository(IUserRepository):
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-
-                with conn.cursor() as cur:
-
-                    query = ("INSERT INTO public.user"
-                             "(id, username, email, password, salt, birthdate, country, profile_picture_path, banner_path, is_private, history_private, adult_content, last_connection, created_at, is_verified, password_reset_token, verification_code, verification_code_token) "
-                             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);")
-
-                    values = (user.id, user.username, user.email, user.password, user.salt, user.birthdate, user.country, "default.png", "default.png", False, False, False, datetime.datetime.now(), datetime.datetime.now(), False, password_reset_token, verification_code, verification_code_token)
-
-                    cur.execute(query, values)
-
-                    success = True
+            with SessionLocal() as session:
+                new_user = DBUser(
+                    id=user.id,
+                    username=user.username,
+                    email=user.email,
+                    password=user.password,
+                    salt=user.salt,
+                    birthdate=user.birthdate,
+                    country=user.country,
+                    profile_picture_path="default.png",
+                    banner_path="default.png",
+                    is_private=False,
+                    history_private=False,
+                    adult_content=False,
+                    last_connection=datetime.datetime.now(),
+                    created_at=datetime.datetime.now(),
+                    is_verified=False,
+                    password_reset_token=password_reset_token,
+                    verification_code=verification_code,
+                    verification_code_token=verification_code_token,
+                    country_=None,
+                    playlist=[]
+                )
+                session.add(new_user)
+                session.commit()
+                success = True
 
         except Exception as e:
             print(e)
@@ -34,41 +48,70 @@ class UserRepository(IUserRepository):
         return success
 
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
-        user: Optional[User] = None
+    def get_user_by_username(self, username: str) -> Optional[DBUser]:
+        user: Optional[DBUser] = None
         try:
-            with db_config.connect_to_db() as conn:
+            with SessionLocal() as session:
+                result = session.query(DBUser).filter(DBUser.username == username).first()
 
-                with conn.cursor() as cur:
+                if result is not None:
+                    user = DBUser(
+                        id=result.id,
+                        username=result.username,
+                        email=result.email,
+                        password=result.password,
+                        birthdate=result.birthdate,
+                        is_private=result.is_private,
+                        history_private=result.history_private,
+                        adult_content=result.adult_content,
+                        last_connection=result.last_connection,
+                        created_at=result.created_at,
+                        salt=result.salt,
+                        country=result.country,
+                        profile_picture_path=result.profile_picture_path,
+                        banner_path=result.banner_path,
+                        is_verified=result.is_verified,
+                        password_reset_token=result.password_reset_token,
+                        verification_code=result.verification_code,
+                        verification_code_token=result.verification_code_token,
+                        country_=result.country_,
+                        playlist=result.playlist
+                    )
+        except Exception as e:
+            print(e)
 
-                    cur.execute("""SELECT id, username, email, password, birthdate, is_private, 
-                                   history_private, adult_content, last_connection, created_at,
-                                   salt, country, profile_picture_path, banner_path, is_verified,
-                                   password_reset_token, verification_code, verification_code_token FROM public.user WHERE username=%s;""", (username,))
+        return user
 
-                    result = cur.fetchone()
 
-                    if result is not None:
-                        user = User(
-                            id=result[0],
-                            username=result[1],
-                            email=result[2],
-                            password=result[3],
-                            birthdate=result[4],
-                            is_private=result[5],
-                            history_private=result[6],
-                            adult_content=result[7],
-                            last_connection=result[8],
-                            created_at=result[9],
-                            salt=result[10],
-                            country=result[11],
-                            profile_picture_path=result[12],
-                            banner_path=result[13],
-                            is_verified=result[14],
-                            password_reset_token=result[15],
-                            verification_code=result[16],
-                            verification_code_token=result[17]
-                        )
+    def get_user_by_email(self, email: str) -> Optional[DBUser]:
+        user: Optional[DBUser] = None
+        try:
+            with SessionLocal() as session:
+                result = session.query(DBUser).filter(DBUser.email == email).first()
+
+                if result is not None:
+                    user = DBUser(
+                        id=result.id,
+                        username=result.username,
+                        email=result.email,
+                        password=result.password,
+                        birthdate=result.birthdate,
+                        is_private=result.is_private,
+                        history_private=result.history_private,
+                        adult_content=result.adult_content,
+                        last_connection=result.last_connection,
+                        created_at=result.created_at,
+                        salt=result.salt,
+                        country=result.country,
+                        profile_picture_path=result.profile_picture_path,
+                        banner_path=result.banner_path,
+                        is_verified=result.is_verified,
+                        password_reset_token=result.password_reset_token,
+                        verification_code=result.verification_code,
+                        verification_code_token=result.verification_code_token,
+                        country_=result.country_,
+                        playlist=result.playlist
+                    )
 
         except Exception as e:
             print(e)
@@ -76,83 +119,35 @@ class UserRepository(IUserRepository):
         return user
 
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
-        user: Optional[User] = None
+    def get_user_by_id(self, id: str) -> Optional[DBUser]:
+        user: Optional[DBUser] = None
         try:
-            with db_config.connect_to_db() as conn:
+            with SessionLocal() as session:
+                result = session.query(DBUser).filter(DBUser.id == id).first()
 
-                with conn.cursor() as cur:
-
-                    cur.execute("""SELECT id, username, email, password, birthdate, is_private, 
-                                   history_private, adult_content, last_connection, created_at,
-                                   salt, country, profile_picture_path, banner_path, is_verified,
-                                   password_reset_token, verification_code, verification_code_token FROM public.user WHERE email=%s;""", (email,))
-
-                    result = cur.fetchone()
-
-                    if result is not None:
-                        user = User(
-                            id=result[0],
-                            username=result[1],
-                            email=result[2],
-                            password=result[3],
-                            birthdate=result[4],
-                            is_private=result[5],
-                            history_private=result[6],
-                            adult_content=result[7],
-                            last_connection=result[8],
-                            created_at=result[9],
-                            salt=result[10],
-                            country=result[11],
-                            profile_picture_path=result[12],
-                            banner_path=result[13],
-                            is_verified=result[14],
-                            password_reset_token=result[15],
-                            verification_code=result[16],
-                            verification_code_token=result[17]
-                        )
-
-        except Exception as e:
-            print(e)
-
-        return user
-
-
-    def get_user_by_id(self, id: str) -> Optional[User]:
-        user: Optional[User] = None
-        try:
-            with db_config.connect_to_db() as conn:
-
-                with conn.cursor() as cur:
-
-                    cur.execute("""SELECT id, username, email, password, birthdate, is_private, 
-                                   history_private, adult_content, last_connection, created_at,
-                                   salt, country, profile_picture_path, banner_path, is_verified,
-                                   password_reset_token, verification_code, verification_code_token FROM public.user WHERE id=%s;""", (id,))
-
-                    result = cur.fetchone()
-
-                    if result is not None:
-                        user = User(
-                            id=result[0],
-                            username=result[1],
-                            email=result[2],
-                            password=result[3],
-                            birthdate=result[4],
-                            is_private=result[5],
-                            history_private=result[6],
-                            adult_content=result[7],
-                            last_connection=result[8],
-                            created_at=result[9],
-                            salt=result[10],
-                            country=result[11],
-                            profile_picture_path=result[12],
-                            banner_path=result[13],
-                            is_verified=result[14],
-                            password_reset_token=result[15],
-                            verification_code=result[16],
-                            verification_code_token=result[17]
-                        )
+                if result is not None:
+                    user = DBUser(
+                        id=result.id,
+                        username=result.username,
+                        email=result.email,
+                        password=result.password,
+                        birthdate=result.birthdate,
+                        is_private=result.is_private,
+                        history_private=result.history_private,
+                        adult_content=result.adult_content,
+                        last_connection=result.last_connection,
+                        created_at=result.created_at,
+                        salt=result.salt,
+                        country=result.country,
+                        profile_picture_path=result.profile_picture_path,
+                        banner_path=result.banner_path,
+                        is_verified=result.is_verified,
+                        password_reset_token=result.password_reset_token,
+                        verification_code=result.verification_code,
+                        verification_code_token=result.verification_code_token,
+                        country_=result.country_,
+                        playlist=result.playlist
+                    )
 
         except Exception as e:
             print(e)
@@ -162,16 +157,12 @@ class UserRepository(IUserRepository):
 
     def verify_user_by_code(self, user_verification: UserVerification) -> str:
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT id FROM public.user WHERE verification_code=%s AND verification_code_token=%s", (user_verification.code, user_verification.token,))
-
-                    result = cur.fetchone()
-
-                    if result is not None:
-                        return result[0]
-                    else:
-                        return ""
+            with SessionLocal() as session:
+                result = session.query(DBUser).filter(DBUser.verification_code == user_verification.code, DBUser.verification_code_token == user_verification.token).first()
+                if result is not None:
+                    return result.id
+                else:
+                    return ""
 
         except (Exception) as e:
             print(e)
@@ -180,21 +171,33 @@ class UserRepository(IUserRepository):
 
     def update_verification_status(self, id: str) -> bool:
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-
-                    query = ("UPDATE public.user SET is_verified=%s WHERE id=%s")
-
-                    values = (True, id)
-
-                    cur.execute(query, values)
-
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == id).first()
+                if user is not None:
+                    user.is_verified = True
+                    session.commit()
                     return True
+                else:
+                    return False
 
         except Exception as e:
             print(e)
             return False
 
+    def update_settings(self, user_id: str, adult_content: bool, is_private: bool, history_private: bool) -> bool:
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
+                if user is None:
+                    return False
+                user.adult_content = adult_content
+                user.is_private = is_private
+                user.history_private = history_private
+                session.commit()
+                return True
+        except Exception as e:
+            print(e)
+            return False
 
     def delete_user(self, user_id: str) -> bool:
         """
@@ -203,15 +206,60 @@ class UserRepository(IUserRepository):
         success: bool = False
 
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    # Delete user (cascade will handle related data if configured)
-                    query = "DELETE FROM public.user WHERE id=%s;"
-                    cur.execute(query, (user_id,))
-
-                    success = cur.rowcount > 0
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
+                if user is not None:
+                    session.delete(user)
+                    session.commit()
+                    success = True
+                else:
+                    success = False
 
         except Exception as e:
             print(f"Error deleting user: {e}")
 
         return success
+
+
+    def check_password_reset_token(self, password_reset_token: str) -> str:
+        user_id: Optional[str] = None
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.password_reset_token == password_reset_token).first()
+                if user is not None:
+                    user_id = user.id
+
+        except Exception as e:
+            print(e)
+
+        return user_id
+
+    def update_user_password(self, new_password: UserPassword) -> bool:
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == new_password.user_id).first()
+                if user is not None:
+                    user.password = new_password.password
+                    user.salt = new_password.salt
+                    user.password_reset_token = new_password.token
+                    session.commit()
+                    return True
+                else:
+                    return False
+
+        except Exception as e:
+            print(e)
+            return False
+
+
+    def get_password_reset_token(self, user_id: str) -> str:
+        try:
+            password_reset_token: str = ""
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
+                if user is not None:
+                    password_reset_token = user.password_reset_token
+            return password_reset_token
+        except Exception as e:
+            print(e)
+            return ""

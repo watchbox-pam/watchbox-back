@@ -43,13 +43,11 @@ class RecommendationRepository(IRecommendationRepository):
                                 title="",
                                 weight=0
                             ))
-
         except Exception as e:
             print(e)
-
         return medias
 
-    def find_by_genres(self, genres: List[int]) -> List[MovieRecommendation]:
+    def find_by_genres(self, genres: List[int], include_adult: bool = False) -> List[MovieRecommendation]:
         medias: List[MovieRecommendation] = []
         try:
             with db_config.connect_to_db() as conn:
@@ -64,12 +62,11 @@ class RecommendationRepository(IRecommendationRepository):
                              "INNER JOIN public.media_keyword mk ON mk.movie_id = m.id "
                              "INNER JOIN public.credit c ON c.movie_id = m.id "
                              "WHERE mg.genre_id = ANY(%s) "
-                             "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537))"
+                             "AND ((c.type = 1 AND c.order < 10) OR (c.type = 2 AND c.job_id = 537)) "
+                             "AND (%s OR m.adult IS NOT TRUE) "
                              "group by mg.movie_id, m.title;")
-
-                    cur.execute(query, (genres,))
+                    cur.execute(query, (genres, include_adult))
                     results = cur.fetchall()
-
                     if results is not None:
                         for result in results:
                             credits = []
@@ -85,10 +82,8 @@ class RecommendationRepository(IRecommendationRepository):
                                 credits=credits,
                                 weight=0
                             ))
-
         except Exception as e:
             print(e)
-
         return medias
 
     def find_with_review(self, user_id: str, movie_ids: List[int]) -> List[MovieReview]:
@@ -113,3 +108,69 @@ class RecommendationRepository(IRecommendationRepository):
             print(e)
 
         return medias
+
+    def get_all_reviews(self) -> List[dict]:  # 👈 ajouté
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT user_id, movie_id, rating
+                        FROM public.review
+                        WHERE rating IS NOT NULL
+                    """)
+                    return [{"user_id": r[0], "movie_id": r[1], "rating": r[2]} for r in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
+
+    def get_swipe_movie_ids(self, user_id: str) -> List[int]:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT movie_id FROM public.swipe
+                        WHERE user_id = %s
+                          AND direction IN ('like', 'dislike')
+                          AND movie_id IS NOT NULL
+                    """, (user_id,))
+                    return [row[0] for row in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
+
+    def get_all_implicit_feedback(self) -> List[dict]:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT pm.user_id, pm.movie_id,
+                            CASE WHEN p.title = 'Favoris' THEN 2.0 ELSE 1.0 END as weight
+                        FROM public.playlist_media pm
+                        JOIN public.playlist p ON p.id = pm.playlist_id
+                        WHERE p.title IN ('Watchlist', 'Favoris')
+                        UNION ALL
+                        SELECT user_id, movie_id,
+                            CASE WHEN direction = 'like' THEN 1.5 ELSE -0.5 END as weight
+                        FROM public.swipe
+                        WHERE direction IN ('like', 'dislike')
+                          AND movie_id IS NOT NULL
+                    """)
+                    return [{"user_id": r[0], "movie_id": r[1], "weight": r[2]} for r in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
+
+    def get_skip_movie_ids(self, user_id: str) -> List[int]:
+        try:
+            with db_config.connect_to_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT movie_id FROM public.swipe
+                        WHERE user_id = %s
+                          AND direction = 'skip'
+                          AND movie_id IS NOT NULL
+                    """, (user_id,))
+                    return [row[0] for row in cur.fetchall()]
+        except Exception as e:
+            print(e)
+            return []
