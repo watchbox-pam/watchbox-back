@@ -64,6 +64,7 @@ async def get_user_by_id(user_id: str = Depends(check_jwt_token), service: IUser
                 "is_private": user.is_private,
                 "history_private": user.history_private,
                 "adult_content": user.adult_content,
+                "birthdate": user.birthdate,
                 "last_connection": user.last_connection,
                 "created_at": user.created_at
             }
