@@ -2,7 +2,6 @@ from typing import Optional, List
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.models.movie import PopularMovieList, MovieDetail
-from domain.models.movieRecommendation import MovieRecommendation
 from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
 from database.db import SessionLocal
@@ -10,10 +9,13 @@ from database.models.movie import Movie as DBMovie
 from sqlalchemy import func
 
 class MovieRepository(IMovieRepository):
-    def find_by_id(self, movie_id: int) -> Optional[MovieDetail]:
+    def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[MovieDetail]:
         endpoint = f"/movie/{movie_id}?language=fr-FR"
 
         result = call_tmdb_api(endpoint)
+
+        if not include_adult and result.get("adult"):
+            return None
 
         movie = MovieDetail(
             id=result["id"],
@@ -37,8 +39,9 @@ class MovieRepository(IMovieRepository):
         return movie
 
 
-    def search(self, search_term: str) -> Optional[list[MovieDetail]]:
-        endpoint = f"/search/movie?query={search_term}&include_adult=false&language=fr-FR"
+    def search(self, search_term: str, include_adult: bool) -> Optional[list[MovieDetail]]:
+        adult_str = "true" if include_adult else "false"
+        endpoint = f"/search/movie?query={search_term}&include_adult={adult_str}&language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
@@ -66,22 +69,25 @@ class MovieRepository(IMovieRepository):
 
         return movies
 
-    def find_by_time_window(self, time_window: str, page: int) -> Optional[PopularMovieList]:
+    def find_by_time_window(self, time_window: str, page: int, include_adult: bool) -> Optional[PopularMovieList]:
         endpoint = f"/trending/movie/{time_window}?page={page}&language=fr-FR"
 
         result = call_tmdb_api(endpoint)
 
+        results = result["results"] if include_adult else [r for r in result["results"] if not r.get("adult")]
+
         movies = PopularMovieList(
             page=result["page"],
-            results=result["results"],
+            results=results,
             total_results=result["total_pages"],
             total_pages=result["total_results"]
         )
 
         return movies
 
-    def find_by_genre(self, genre: str) -> Optional[PopularMovieList]:
-        endpoint = f"/discover/movie?with_genres={genre}&include_adult=false&include_video=false&language=fr-FR&page=1&sort_by=popularity.desc"
+    def find_by_genre(self, genre: str, include_adult: bool) -> Optional[PopularMovieList]:
+        adult_str = "true" if include_adult else "false"
+        endpoint = f"/discover/movie?with_genres={genre}&include_adult={adult_str}&include_video=false&language=fr-FR&page=1&sort_by=popularity.desc"
 
         result = call_tmdb_api(endpoint)
 
@@ -103,7 +109,7 @@ class MovieRepository(IMovieRepository):
         except Exception as e:
             print(f"[ERREUR] Exception dans movie_runtime : {e}")
             return 0
-        
+
     def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
 
         movies: List[DBMovie] = []

@@ -32,7 +32,7 @@ class TestMovieRepository:
         repository = MovieRepository()
 
         # Appel de la méthode find_by_id avec un ID de film
-        result = repository.find_by_id(123)
+        result = repository.find_by_id(123, False)
 
         # Vérification que le résultat est bien une instance de MovieDetail
         assert isinstance(result, MovieDetail)
@@ -70,7 +70,7 @@ class TestMovieRepository:
         repository = MovieRepository()
 
         # Appel de la méthode search pour rechercher un film
-        result = repository.search("test movie")
+        result = repository.search("test movie", False)
 
         # Vérification que le nombre de résultats est correct
         assert len(result) == 1
@@ -102,7 +102,7 @@ class TestMovieRepository:
         repository = MovieRepository()
 
         # Appel de la méthode find_by_time_window pour récupérer les films populaires
-        result = repository.find_by_time_window("week", 1)
+        result = repository.find_by_time_window("week", 1, False)
 
         # Vérification que le résultat est une instance de PopularMovieList
         assert isinstance(result, PopularMovieList)

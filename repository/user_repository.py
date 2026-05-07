@@ -250,3 +250,16 @@ class UserRepository(IUserRepository):
         except Exception as e:
             print(e)
             return False
+
+
+    def get_password_reset_token(self, user_id: str) -> str:
+        try:
+            password_reset_token: str = ""
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
+                if user is not None:
+                    password_reset_token = user.password_reset_token
+            return password_reset_token
+        except Exception as e:
+            print(e)
+            return ""

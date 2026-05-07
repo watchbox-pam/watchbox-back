@@ -145,7 +145,7 @@ class TestMovieService:
             mock_watch_providers_repository
         )
 
-        result = service.find_by_id(123)
+        result = service.find_by_id(123, False)
 
         # Vérification que les données du film sont correctes
         assert result["id"] == 123
@@ -154,9 +154,9 @@ class TestMovieService:
         assert result["video_key"] == "video_key"
         assert result["director"]["name"] == "Director"
         assert result["composer"]["name"] == "Composer"
-        mock_movie_repository.find_by_id.assert_called_once_with(123)
+        mock_movie_repository.find_by_id.assert_called_once_with(123, False)
         mock_release_dates_repository.find_by_id.assert_called_once_with(123)
-        mock_credits_repository.find_by_id.assert_called_once_with(123)
+        mock_credits_repository.find_by_id.assert_called_once_with(123, False)
         mock_videos_repository.find_by_id.assert_called_once_with(123)
         mock_watch_providers_repository.find_by_id.assert_called_once_with(123)
 
@@ -173,13 +173,13 @@ class TestMovieService:
             mock_watch_providers_repository
         )
 
-        result = service.search("Test Movie")
+        result = service.search("Test Movie", False)
 
         # Vérification que la recherche a retourné un film
         assert len(result) == 1
         assert result[0].id == 123
         assert result[0].title == "Test Movie FR"
-        mock_movie_repository.search.assert_called_once_with("Test Movie")
+        mock_movie_repository.search.assert_called_once_with("Test Movie", False)
 
     # Test de la méthode 'find_by_time_window' pour récupérer les films populaires
     def test_find_by_time_window(self, mock_movie_repository, mock_release_dates_repository,
@@ -193,10 +193,10 @@ class TestMovieService:
             mock_watch_providers_repository
         )
 
-        result = service.find_by_time_window("week", 1)
+        result = service.find_by_time_window("week", 1, False)
 
         # Vérification des films populaires retournés
         assert result.page == 1
         assert len(result.results) == 1
         assert result.results[0]["id"] == 123
-        mock_movie_repository.find_by_time_window.assert_called_once_with("week", 1)
+        mock_movie_repository.find_by_time_window.assert_called_once_with("week", 1, False)
