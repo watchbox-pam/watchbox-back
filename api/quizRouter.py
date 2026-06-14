@@ -2,7 +2,6 @@ import random
 import threading
 from typing import Optional
 
-import db_config
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -166,17 +165,4 @@ def _shuffle_with_images(
 
 
 def _fetch_poster_paths(titles: list[str]) -> dict[str, Optional[str]]:
-    try:
-        with db_config.connect_to_db() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT DISTINCT ON (title) title, poster_path
-                    FROM movie
-                    WHERE title = ANY(%s)
-                      AND poster_path IS NOT NULL
-                    ORDER BY title, popularity DESC NULLS LAST
-                """, (titles,))
-                return {row[0]: row[1] for row in cur.fetchall()}
-    except Exception as e:
-        print(e)
-        return {}
+    return QuizRepository().get_poster_paths(titles)

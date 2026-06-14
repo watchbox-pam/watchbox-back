@@ -1,7 +1,6 @@
 import random
 from typing import List
 
-import db_config
 from domain.interfaces.repositories.i_quiz_repository import IQuizRepository
 from domain.interfaces.services.i_quiz_service import IQuizService
 from domain.models.quiz import (
@@ -101,7 +100,7 @@ class QuizService(IQuizService):
         questions = []
 
         print(f"[QUIZ] Génération {genre_slug} (genre_id={genre_id})…")
-        movies = self._fetch_movies_for_genre(genre_id)
+        movies = self.repository.get_movies_for_genre(genre_id)
         print(f"[QUIZ] {genre_slug} → {len(movies)} films trouvés")
         if not movies:
             print(f"[QUIZ] {genre_slug} → aucun film, génération annulée")
@@ -320,40 +319,6 @@ class QuizService(IQuizService):
         return questions
 
     # ── Helpers ─────────────────────────────────────────────────────────────
-
-    def _fetch_movies_for_genre(self, genre_id: int) -> list:
-        try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT
-                            m.id,
-                            m.title,
-                            m.backdrop_path,
-                            m.poster_path,
-                            MAX(CASE WHEN c.job_id = 537 THEN p.name END) AS director,
-                            MAX(CASE WHEN c.job_id = 96 AND c.order = 0 THEN p.name END) AS main_actor,
-                            EXTRACT(YEAR FROM m.release_date)::int AS release_year,
-                            m.original_title,
-                            m.budget,
-                            m.runtime
-                        FROM movie m
-                        JOIN movie_movie_genre mg ON mg.movie_id = m.id
-                        LEFT JOIN credit c ON c.movie_id = m.id
-                            AND (c.job_id = 537 OR (c.job_id = 96 AND c.order = 0))
-                        LEFT JOIN person p ON p.id = c.person_id
-                        WHERE mg.genre_id = %s
-                          AND m.title IS NOT NULL
-                        GROUP BY m.id, m.title, m.backdrop_path, m.poster_path,
-                                 m.release_date, m.original_title, m.popularity,
-                                 m.budget, m.runtime
-                        ORDER BY m.popularity DESC
-                        LIMIT 50
-                    """, (genre_id,))
-                    return cur.fetchall()
-        except Exception as e:
-            print(e)
-            return []
 
     def _build(
         self, genre_slug: str, movie_id: int, q_type: str,
