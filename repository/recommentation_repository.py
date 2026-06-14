@@ -143,14 +143,14 @@ class RecommendationRepository(IRecommendationRepository):
             with db_config.connect_to_db() as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT pm.user_id, pm.movie_id,
-                            CASE WHEN p.title = 'Favoris' THEN 2.0 ELSE 1.0 END as weight
+                        SELECT p.user_id, pm.movie_id,
+                            (CASE WHEN p.title = 'Favoris' THEN 2.0 ELSE 1.0 END)::float8 as weight
                         FROM public.playlist_media pm
                         JOIN public.playlist p ON p.id = pm.playlist_id
                         WHERE p.title IN ('Watchlist', 'Favoris')
                         UNION ALL
                         SELECT user_id, movie_id,
-                            CASE WHEN direction = 'like' THEN 1.5 ELSE -0.5 END as weight
+                            (CASE WHEN direction = 'like' THEN 1.5 ELSE -0.5 END)::float8 as weight
                         FROM public.swipe
                         WHERE direction IN ('like', 'dislike')
                           AND movie_id IS NOT NULL

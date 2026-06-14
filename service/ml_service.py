@@ -78,16 +78,11 @@ class MLService:
         np.random.seed(42)
         X = np.random.normal(0, 0.1, (n_users, k))
         Y = np.random.normal(0, 0.1, (n_movies, k))
+        reg = regularization * np.eye(k)
 
         for _ in range(iterations):
-            for u in range(n_users):
-                YtY = Y.T @ Y
-                reg = regularization * np.eye(k)
-                X[u] = np.linalg.solve(YtY + reg, Y.T @ R[u])
-            for i in range(n_movies):
-                XtX = X.T @ X
-                reg = regularization * np.eye(k)
-                Y[i] = np.linalg.solve(XtX + reg, X.T @ R[:, i])
+            X = np.linalg.solve(Y.T @ Y + reg, Y.T @ R.T).T
+            Y = np.linalg.solve(X.T @ X + reg, X.T @ R).T
 
         self.user_factors_als = X
         self.item_factors_als = Y
