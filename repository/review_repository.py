@@ -1,12 +1,12 @@
 from datetime import datetime
 from typing import List
 
-import db_config
+from sqlalchemy import func
 
 from domain.interfaces.repositories.i_review_repository import IReviewRepository
 from domain.models.review import Review, UserInfo
 from database.db import SessionLocal
-from database.models import t_review, User as DBUser
+from database.models import t_review, t_ml_training_counter, User as DBUser
 
 
 class ReviewRepository(IReviewRepository):
@@ -68,28 +68,27 @@ class ReviewRepository(IReviewRepository):
 
     def increment_counter(self) -> int:
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE ml_training_counter
-                        SET new_ratings_count = new_ratings_count + 1
-                        RETURNING new_ratings_count
-                    """)
-                    conn.commit()
-                    return cur.fetchone()[0]
+            with SessionLocal() as session:
+                stmt = (
+                    t_ml_training_counter.update()
+                    .values(new_ratings_count=t_ml_training_counter.c.new_ratings_count + 1)
+                    .returning(t_ml_training_counter.c.new_ratings_count)
+                )
+                new_count = session.execute(stmt).scalar()
+                session.commit()
+                return new_count or 0
         except Exception as e:
             print(e)
             return 0
 
     def reset_counter(self) -> None:
         try:
-            with db_config.connect_to_db() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE ml_training_counter
-                        SET new_ratings_count = 0,
-                            last_trained_at = NOW()
-                    """)
-                    conn.commit()
+            with SessionLocal() as session:
+                stmt = t_ml_training_counter.update().values(
+                    new_ratings_count=0,
+                    last_trained_at=func.now(),
+                )
+                session.execute(stmt)
+                session.commit()
         except Exception as e:
             print(e)

@@ -159,13 +159,15 @@ class RecommendationService(IRecommendationService):
                 for kw in media.keywords:
                     kw_weights[kw] += 10
                 for c in media.credits:
-                    if c["job_id"] == "96":
+                    if c["job_id"] == 96:
                         actor_weights[c["person_id"]] += 10
-                    elif c["job_id"] == "537":
+                    elif c["job_id"] == 537:
                         director_weights[c["person_id"]] += 10
 
+        rating_count = 0
         if history_ids and f_hist_reco:
             history_reviews: List[MovieReview] = f_reviews.result() if f_reviews else []
+            rating_count = len(history_reviews)
             review_map = defaultdict(list)
             for r in history_reviews:
                 review_map[r.movie_id].append(r.rating)
@@ -175,9 +177,9 @@ class RecommendationService(IRecommendationService):
                 for kw in media.keywords:
                     kw_weights[kw] += w
                 for c in media.credits:
-                    if c["job_id"] == "96":
+                    if c["job_id"] == 96:
                         actor_weights[c["person_id"]] += w
-                    elif c["job_id"] == "537":
+                    elif c["job_id"] == 537:
                         director_weights[c["person_id"]] += w
 
         if favorites_ids and f_fav_reco:
@@ -185,9 +187,9 @@ class RecommendationService(IRecommendationService):
                 for kw in media.keywords:
                     kw_weights[kw] += 20
                 for c in media.credits:
-                    if c["job_id"] == "96":
+                    if c["job_id"] == 96:
                         actor_weights[c["person_id"]] += 20
-                    elif c["job_id"] == "537":
+                    elif c["job_id"] == 537:
                         director_weights[c["person_id"]] += 20
 
         # Exclure historique + exclude_ids
@@ -211,12 +213,11 @@ class RecommendationService(IRecommendationService):
             for kw in media.keywords:
                 media.weight += kw_weights.get(kw, 0)
             for c in media.credits:
-                if c["job_id"] == "96":
+                if c["job_id"] == 96:
                     media.weight += actor_weights.get(c["person_id"], 0)
-                elif c["job_id"] == "537":
+                elif c["job_id"] == 537:
                     media.weight += director_weights.get(c["person_id"], 0) * 2
 
-        rating_count = len(history_ids)
         w_svd, w_als, w_content = self._get_adaptive_weights(user_id, rating_count)
 
         content_scores = self._normalize(genre_medias)
