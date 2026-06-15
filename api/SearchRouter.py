@@ -48,6 +48,17 @@ async def search_actors(
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
+@search_router.get("/users/{search_term}")
+async def search_users(
+    search_term: str,
+    service: ISearchService = Depends(get_search_service)
+):
+    try:
+        results = service.search_users(search_term)
+        return results
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
 @search_router.get("/{search_term}")
 async def search_all(
     search_term: str,

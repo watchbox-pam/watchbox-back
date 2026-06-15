@@ -48,8 +48,8 @@ async def login_user(user: UserLogin, service: IUserService = Depends(get_user_s
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@user_router.get("/profile")
-async def get_user_by_id(user_id: str = Depends(check_jwt_token), service: IUserService = Depends(get_user_service)):
+@user_router.get("/profile/{user_id}")
+async def get_user_by_id(user_id: str, service: IUserService = Depends(get_user_service)):
     try:
         id_str: str = str(user_id)
         user = service.get_user_by_id(id_str)
