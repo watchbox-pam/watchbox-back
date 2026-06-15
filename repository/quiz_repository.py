@@ -90,6 +90,20 @@ class QuizRepository(IQuizRepository):
             print(e)
             return 0
 
+    def count_questions_by_genre(self) -> dict:
+        counts = {}
+        try:
+            with SessionLocal() as session:
+                stmt = (
+                    select(t_quiz_question.c.genre_slug, func.count())
+                    .group_by(t_quiz_question.c.genre_slug)
+                )
+                for slug, n in session.execute(stmt):
+                    counts[slug] = n
+        except Exception as e:
+            print(e)
+        return counts
+
     def insert_questions(self, questions: list[dict]) -> None:
         if not questions:
             return
