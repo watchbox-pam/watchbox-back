@@ -26,6 +26,20 @@ class QuizRepository(IQuizRepository):
         questions = []
         try:
             with SessionLocal() as session:
+                
+                image_expr = case(
+                    (
+                        t_quiz_question.c.question_type.in_(
+                            ["same_director", "film_not_by_director"]
+                        ),
+                        t_quiz_question.c.image_path,
+                    ),
+                    else_=func.coalesce(
+                        t_quiz_question.c.image_path,
+                        Movie.backdrop_path,
+                        Movie.poster_path,
+                    ),
+                ).label("image_path")
                 stmt = (
                     select(
                         t_quiz_question.c.id,
@@ -36,7 +50,14 @@ class QuizRepository(IQuizRepository):
                         t_quiz_question.c.wrong_answer_1,
                         t_quiz_question.c.wrong_answer_2,
                         t_quiz_question.c.wrong_answer_3,
-                        t_quiz_question.c.image_path,
+                        image_expr,
+                    )
+                    .select_from(
+                        t_quiz_question.join(
+                            Movie.__table__,
+                            Movie.id == t_quiz_question.c.movie_id,
+                            isouter=True,
+                        )
                     )
                     .where(t_quiz_question.c.genre_slug == genre_slug)
                     .order_by(func.random())
