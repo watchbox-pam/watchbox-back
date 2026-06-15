@@ -1,4 +1,5 @@
 import random
+import threading
 from typing import List
 
 from domain.interfaces.repositories.i_quiz_repository import IQuizRepository
@@ -92,6 +93,40 @@ class QuizService(IQuizService):
 
     def get_user_scores(self, user_id: str) -> UserScores:
         return self.repository.get_user_scores(user_id)
+
+    def get_question_count(self, genre_slug: str) -> int:
+        return self.repository.count_questions(genre_slug)
+
+    def get_poster_paths(self, titles: List[str]) -> dict:
+        return self.repository.get_poster_paths(titles)
+
+    def trigger_generation(self, genre_slug: str) -> None:
+        """Generate questions for a genre in a background daemon thread.
+        Used by the routes so a request never blocks on generation."""
+        threading.Thread(
+            target=self.generate_questions, args=(genre_slug,), daemon=True
+        ).start()
+
+    def prewarm(self) -> List[str]:
+        """Trigger background generation for every genre below the minimum.
+        Returns the list of genres that started generating."""
+        generating = []
+        for slug in GENRE_SLUG_TO_ID:
+            if self.repository.count_questions(slug) < MIN_QUESTIONS:
+                self.trigger_generation(slug)
+                generating.append(slug)
+        return generating
+
+    def get_status(self) -> dict:
+        """Per-genre question count + whether the genre is ready to play."""
+        counts = self.repository.count_questions_by_genre()
+        return {
+            slug: {
+                "count": counts.get(slug, 0),
+                "ready": counts.get(slug, 0) >= QUESTIONS_PER_QUIZ,
+            }
+            for slug in GENRE_SLUG_TO_ID
+        }
 
     # ── Generation ──────────────────────────────────────────────────────────
 

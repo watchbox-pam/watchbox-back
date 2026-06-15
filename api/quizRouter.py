@@ -1,5 +1,4 @@
 import random
-import threading
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,7 +13,8 @@ quiz_router = APIRouter(prefix="/quiz", tags=["quiz"])
 
 
 def get_quiz_service() -> IQuizService:
-    return QuizService(QuizRepository())
+    repository = QuizRepository()  # Implémentation concrète de IQuizRepository
+    return QuizService(repository)
 
 
 class AnswerPayload(BaseModel):
@@ -31,34 +31,30 @@ class SubmitPayload(BaseModel):
 @quiz_router.get("/questions/{genre_slug}")
 def get_questions(
     genre_slug: str,
-    user_id: str = Depends(check_jwt_token)
+    user_id: str = Depends(check_jwt_token),
+    service: IQuizService = Depends(get_quiz_service)
 ):
     if genre_slug not in GENRE_SLUG_TO_ID:
         raise HTTPException(status_code=404, detail="Genre inconnu")
 
-    repo = QuizRepository()
-    count = repo.count_questions(genre_slug)
+    count = service.get_question_count(genre_slug)
 
     if count == 0:
-        threading.Thread(
-            target=lambda: QuizService(QuizRepository()).generate_questions(genre_slug),
-            daemon=True
-        ).start()
+        service.trigger_generation(genre_slug)
         raise HTTPException(
             status_code=503,
             detail="Questions en cours de préparation, réessaie dans quelques secondes."
         )
 
-    if count < 30:
-        threading.Thread(
-            target=lambda: QuizService(QuizRepository()).generate_questions(genre_slug),
-            daemon=True
-        ).start()
+    if count < MIN_QUESTIONS:
+        service.trigger_generation(genre_slug)
 
-    questions = repo.get_questions(genre_slug, 10)
+    questions = service.get_questions(genre_slug)
     result = []
     for q in questions:
-        answers, answer_images = _shuffle_with_images(q.correct_answer, q.wrong_answers, q.question_type)
+        answers, answer_images = _shuffle_with_images(
+            q.correct_answer, q.wrong_answers, q.question_type, service
+        )
         result.append({
             "id": q.id,
             "question_type": q.question_type,
@@ -71,21 +67,24 @@ def get_questions(
     return result
 
 
+@quiz_router.get("/status")
+def quiz_status(
+    user_id: str = Depends(check_jwt_token),
+    service: IQuizService = Depends(get_quiz_service)
+):
+    """Per-genre question count + readiness. The home screen uses it to
+    enable/disable each genre card while generation runs."""
+    return service.get_status()
+
+
 @quiz_router.post("/prewarm")
-def prewarm_quiz(user_id: str = Depends(check_jwt_token)):
-    """Kick off background generation for every genre that is below the
-    minimum, so questions are ready before the user picks a category.
-    Returns immediately — generation runs in daemon threads."""
-    repo = QuizRepository()
-    generating = []
-    for slug in GENRE_SLUG_TO_ID:
-        if repo.count_questions(slug) < MIN_QUESTIONS:
-            threading.Thread(
-                target=lambda s=slug: QuizService(QuizRepository()).generate_questions(s),
-                daemon=True
-            ).start()
-            generating.append(slug)
-    return {"generating": generating}
+def prewarm_quiz(
+    user_id: str = Depends(check_jwt_token),
+    service: IQuizService = Depends(get_quiz_service)
+):
+    """Kick off background generation for every genre below the minimum, so
+    questions are ready before the user picks a category. Returns immediately."""
+    return {"generating": service.prewarm()}
 
 
 @quiz_router.post("/submit")
@@ -168,7 +167,8 @@ def get_user_scores(
 def _shuffle_with_images(
     correct: str,
     wrong: list[str],
-    question_type: str
+    question_type: str,
+    service: IQuizService
 ) -> tuple[list[str], Optional[list[Optional[str]]]]:
     answers = wrong + [correct]
     random.shuffle(answers)
@@ -176,10 +176,6 @@ def _shuffle_with_images(
     if question_type != "poster_guess":
         return answers, None
 
-    poster_map = _fetch_poster_paths(answers)
+    poster_map = service.get_poster_paths(answers)
     images = [poster_map.get(title) for title in answers]
     return answers, images
-
-
-def _fetch_poster_paths(titles: list[str]) -> dict[str, Optional[str]]:
-    return QuizRepository().get_poster_paths(titles)
