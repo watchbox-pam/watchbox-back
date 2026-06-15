@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from api.auth.verify_auth_token import check_jwt_token
 from domain.interfaces.services.i_quiz_service import IQuizService
 from repository.quiz_repository import QuizRepository
-from service.quiz_service import QuizService, GENRE_SLUG_TO_ID
+from service.quiz_service import QuizService, GENRE_SLUG_TO_ID, MIN_QUESTIONS
 
 quiz_router = APIRouter(prefix="/quiz", tags=["quiz"])
 
@@ -69,6 +69,23 @@ def get_questions(
             "image_path": q.image_path
         })
     return result
+
+
+@quiz_router.post("/prewarm")
+def prewarm_quiz(user_id: str = Depends(check_jwt_token)):
+    """Kick off background generation for every genre that is below the
+    minimum, so questions are ready before the user picks a category.
+    Returns immediately — generation runs in daemon threads."""
+    repo = QuizRepository()
+    generating = []
+    for slug in GENRE_SLUG_TO_ID:
+        if repo.count_questions(slug) < MIN_QUESTIONS:
+            threading.Thread(
+                target=lambda s=slug: QuizService(QuizRepository()).generate_questions(s),
+                daemon=True
+            ).start()
+            generating.append(slug)
+    return {"generating": generating}
 
 
 @quiz_router.post("/submit")
