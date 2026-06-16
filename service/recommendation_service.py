@@ -11,6 +11,8 @@ from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
 from domain.models.movieReview import MovieReview
 from service.ml_state import get_ml
 
+SKIP_PENALTY = 0.5
+
 
 class RecommendationService(IRecommendationService):
     def __init__(self, repository: IRecommendationRepository, playlist_repository: IPlaylistRepository):
@@ -113,7 +115,8 @@ class RecommendationService(IRecommendationService):
         swipe_ids      = f_swipes.result()
         genre_medias   = f_genres.result()
 
-        exclude_set = set(exclude_ids or []) | set(skip_ids)
+        skip_set = set(skip_ids)
+        exclude_set = set(exclude_ids or [])
 
         user_watchlist_id = user_history_id = user_favorites_id = ""
         for item in user_playlists:
@@ -185,20 +188,16 @@ class RecommendationService(IRecommendationService):
         if favorites_ids and f_fav_reco:
             for media in f_fav_reco.result():
                 for kw in media.keywords:
-                    kw_weights[kw] += 20
+                    kw_weights[kw] += 10
                 for c in media.credits:
                     if c["job_id"] == 96:
-                        actor_weights[c["person_id"]] += 20
+                        actor_weights[c["person_id"]] += 10
                     elif c["job_id"] == 537:
-                        director_weights[c["person_id"]] += 20
+                        director_weights[c["person_id"]] += 10
 
-        # Exclure historique + exclude_ids
-        history_set = set(history_ids)
-        if history_set or exclude_set:
-            genre_medias = [
-                m for m in genre_medias
-                if (m.id not in history_set and m.id not in exclude_set)
-            ]
+        seen_set = set(history_ids) | set(favorites_ids) | exclude_set
+        if seen_set:
+            genre_medias = [m for m in genre_medias if m.id not in seen_set]
 
         candidate_ids = [m.id for m in genre_medias]
 
@@ -235,10 +234,12 @@ class RecommendationService(IRecommendationService):
                 + als_scores.get(media.id, 0.0) * w_als
                 + content_scores.get(media.id, 0.0) * w_content
             )
+            if media.id in skip_set:
+                media.weight *= SKIP_PENALTY
 
         genre_medias = sorted(genre_medias, key=lambda x: x.popularity, reverse=True)
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
 
         pool_size = max(30, limit * 3)
-        diversified = self._diversify(genre_medias[:pool_size], top_n=limit, diversity_penalty=0.3)
+        diversified = self._diversify(genre_medias[:pool_size], top_n=limit, diversity_penalty=0.5)
         return diversified[:limit]
