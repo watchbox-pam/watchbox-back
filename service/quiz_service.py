@@ -154,7 +154,7 @@ class QuizService(IQuizService):
         for movie in movies:
             (movie_id, title, backdrop, poster,
              director, main_actor, release_year,
-             original_title, budget, runtime) = movie
+             _original_title, budget, runtime) = movie
 
             image_path = backdrop or poster
 
@@ -189,16 +189,6 @@ class QuizService(IQuizService):
                     str(year), [str(y) for y in wrong], image_path
                 ))
 
-            # Type: original_title
-            if original_title and original_title != title:
-                wrong = self.repository.get_original_titles_for_genre(genre_id, movie_id, 3)
-                if len(wrong) == 3:
-                    questions.append(self._build(
-                        genre_slug, movie_id, "original_title",
-                        f'Quel est le titre original de "{title}" ?',
-                        original_title, wrong, image_path
-                    ))
-
             # Type: poster_guess
             if poster:
                 wrong_titles = [t for t in poster_titles if t != title]
@@ -206,8 +196,8 @@ class QuizService(IQuizService):
                     wrong = random.sample(wrong_titles, 3)
                     questions.append(self._build(
                         genre_slug, movie_id, "poster_guess",
-                        "De quel film est cette affiche ?",
-                        title, wrong, poster
+                        "De quel film s'agit-il ?",
+                        title, wrong, backdrop
                     ))
 
             # Type: location_guess
@@ -304,7 +294,7 @@ class QuizService(IQuizService):
             questions.append(self._build(
                 genre_slug, winner[0], q_type,
                 text,
-                winner[1], [o[1] for o in others], winner[2]
+                winner[1], [o[1] for o in others], None
             ))
 
         return questions

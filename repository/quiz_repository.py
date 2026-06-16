@@ -27,11 +27,16 @@ class QuizRepository(IQuizRepository):
         try:
             with SessionLocal() as session:
                 
+                no_image_types = [
+                    "same_director",
+                    "film_not_by_director",
+                    "biggest_budget",
+                    "oldest_film",
+                    "longest_film",
+                ]
                 image_expr = case(
                     (
-                        t_quiz_question.c.question_type.in_(
-                            ["same_director", "film_not_by_director"]
-                        ),
+                        t_quiz_question.c.question_type.in_(no_image_types),
                         t_quiz_question.c.image_path,
                     ),
                     else_=func.coalesce(
@@ -40,7 +45,12 @@ class QuizRepository(IQuizRepository):
                         Movie.poster_path,
                     ),
                 ).label("image_path")
-                stmt = (
+                # DISTINCT ON (movie_id) → au plus 1 question par film dans un
+                # lot : si une question sort sur Gremlins, aucune autre question
+                # sur Gremlins n'apparaîtra dans ces 10. Postgres impose
+                # DISTINCT ON + ORDER BY (movie_id, ...) ; on enveloppe ensuite
+                # dans une sous-requête pour le tirage aléatoire final.
+                subq = (
                     select(
                         t_quiz_question.c.id,
                         t_quiz_question.c.genre_slug,
@@ -60,9 +70,11 @@ class QuizRepository(IQuizRepository):
                         )
                     )
                     .where(t_quiz_question.c.genre_slug == genre_slug)
-                    .order_by(func.random())
-                    .limit(count)
+                    .distinct(t_quiz_question.c.movie_id)
+                    .order_by(t_quiz_question.c.movie_id, func.random())
+                    .subquery()
                 )
+                stmt = select(subq).order_by(func.random()).limit(count)
                 for row in session.execute(stmt):
                     questions.append(QuizQuestion(
                         id=row[0],
@@ -288,30 +300,6 @@ class QuizRepository(IQuizRepository):
             print(e)
             return []
 
-    def get_original_titles_for_genre(self, genre_id: int, exclude_movie_id: int, limit: int) -> List[str]:
-        try:
-            with SessionLocal() as session:
-                subq = (
-                    select(Movie.original_title.label("original_title"))
-                    .distinct()
-                    .select_from(
-                        Movie.__table__
-                        .join(t_movie_movie_genre, t_movie_movie_genre.c.movie_id == Movie.id)
-                    )
-                    .where(
-                        t_movie_movie_genre.c.genre_id == genre_id,
-                        Movie.id != exclude_movie_id,
-                        Movie.original_title.isnot(None),
-                        Movie.original_title != Movie.title,
-                    )
-                    .subquery()
-                )
-                stmt = select(subq.c.original_title).order_by(func.random()).limit(limit)
-                return [row[0] for row in session.execute(stmt)]
-        except Exception as e:
-            print(e)
-            return []
-
     def get_actors_in_film(self, movie_id: int, limit: int) -> List[str]:
         try:
             with SessionLocal() as session:
@@ -447,7 +435,7 @@ class QuizRepository(IQuizRepository):
             print(e)
             return {}
 
-    def get_movies_for_genre(self, genre_id: int, limit: int = 50) -> List[tuple]:
+    def get_movies_for_genre(self, genre_id: int, limit: Optional[int] = None) -> List[tuple]:
         # Returns, per movie: (id, title, backdrop, poster, director, main_actor,
         #                       release_year, original_title, budget, runtime)
         try:
@@ -490,9 +478,9 @@ class QuizRepository(IQuizRepository):
                         Movie.release_date, Movie.original_title, Movie.popularity,
                         Movie.budget, Movie.runtime,
                     )
-                    .order_by(Movie.popularity.desc())
-                    .limit(limit)
                 )
+                if limit is not None:
+                    stmt = stmt.limit(limit)
                 return [tuple(row) for row in session.execute(stmt)]
         except Exception as e:
             print(e)
