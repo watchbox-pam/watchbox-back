@@ -22,7 +22,6 @@ class MovieDetail:
     status: str
     title: str
     video: str
-    infos_complete: bool
     age_restriction: Optional[str] = None
     casting: Optional[list] = None
     director: Optional[dict] = None

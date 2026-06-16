@@ -1,11 +1,12 @@
 from typing import Optional
 import datetime
-from sqlalchemy import BigInteger, Boolean, Date, Double, Integer, PrimaryKeyConstraint, String, Text, text
+from sqlalchemy import BigInteger, Boolean, Date, Double, Integer, PrimaryKeyConstraint, String, Text, text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database.models.base import Base
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from database.models.movie_genre import MovieGenre
+    from database.models.movie_translation import MovieTranslation
 
 class Movie(Base):
     __tablename__ = 'movie'
@@ -21,16 +22,14 @@ class Movie(Base):
     imdb_id: Mapped[Optional[str]] = mapped_column(String)
     original_language: Mapped[Optional[str]] = mapped_column(String)
     original_title: Mapped[Optional[str]] = mapped_column(String)
-    overview: Mapped[Optional[str]] = mapped_column(Text)
-    poster_path: Mapped[Optional[str]] = mapped_column(Text)
     release_date: Mapped[Optional[datetime.date]] = mapped_column(Date)
     revenue: Mapped[Optional[int]] = mapped_column(BigInteger)
     runtime: Mapped[Optional[int]] = mapped_column(Integer)
     status: Mapped[Optional[str]] = mapped_column(String)
-    tagline: Mapped[Optional[str]] = mapped_column(Text)
-    title: Mapped[Optional[str]] = mapped_column(String)
     popularity: Mapped[Optional[float]] = mapped_column(Double(53))
     video: Mapped[Optional[str]] = mapped_column(String)
-    infos_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
+    # infos_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text("now()"))
+    translations: Mapped[list['MovieTranslation']] = relationship('MovieTranslation', back_populates='movie', cascade='all, delete-orphan')
 
     genre: Mapped[list['MovieGenre']] = relationship('MovieGenre', secondary='movie_movie_genre', back_populates='movie')

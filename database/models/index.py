@@ -1,6 +1,6 @@
 from database.models.association_tables import (
 	t_media_keyword,
-	t_media_language,
+	#t_media_language,
 	t_media_media_provider,
 	t_media_production_company,
 	t_media_production_country,
@@ -32,3 +32,4 @@ from database.models.tv_genre import TvGenre
 from database.models.tv_season import TvSeason
 from database.models.tv import Tv
 from database.models.user import User
+from database.models.movie_translation import MovieTranslation

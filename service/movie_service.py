@@ -88,7 +88,21 @@ class MovieService(IMovieService):
                     break
 
         return {
-            **movie.__dict__,
+            "id": movie.id,
+            "adult": movie.adult,
+            "backdrop_path": movie.backdrop_path,
+            "budget": movie.budget,
+            "genres": movie.genres,
+            "original_language": movie.original_language,
+            "original_title": movie.original_title,
+            "overview": movie.overview,
+            "poster_path": movie.poster_path,
+            "release_date": movie.release_date,
+            "revenue": movie.revenue,
+            "runtime": movie.runtime,
+            "status": movie.status,
+            "title": movie.title,
+            "video": movie.video,
             "age_restriction": france_release_date.get("certification") if france_release_date else None,
             "casting": casting,
             "director": director,

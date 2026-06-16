@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from database.db import SessionLocal
-from database.models import t_swipe, t_review
+from database.models.association_tables import t_swipe, t_review
 
 DIRECTION_TO_RATING = {"like": 8, "dislike": 2}
 

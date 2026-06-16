@@ -11,6 +11,7 @@ from database.models.playlist import Playlist as DBPlaylist
 from database.models.user import User as DBUser
 from database.models.association_tables import t_playlist_media
 from database.models.movie import Movie as DBMovie
+from database.models.movie_translation import MovieTranslation as DBMovieTranslation
 from sqlalchemy import select, insert, delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from utils.tmdb_service import call_tmdb_api
@@ -237,14 +238,16 @@ class PlaylistRepository(IPlaylistRepository):
                 results = session.execute(
                     select(
                         DBMovie.id,
-                        DBMovie.poster_path,
-                        DBMovie.title,
+                        DBMovieTranslation.poster_path,
+                        DBMovieTranslation.title,
                         DBMovie.release_date,
                 ).select_from(
                         t_playlist_media.join(
                             DBMovie, t_playlist_media.c.movie_id == DBMovie.id
                         ).join(
                             DBPlaylist, t_playlist_media.c.playlist_id == DBPlaylist.id
+                        ).join(
+                            DBMovieTranslation, (DBMovieTranslation.movie_id == DBMovie.id) & (DBMovieTranslation.language_iso == 'fr')
                         )
                     ).where(DBPlaylist.id == playlist_id)
                 ).fetchall()
