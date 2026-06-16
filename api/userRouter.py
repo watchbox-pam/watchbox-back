@@ -77,6 +77,13 @@ async def get_user_by_id(user_id: str, service: IUserService = Depends(get_user_
         print(f"error 3 is {error}")
         raise HTTPException(status_code=400, detail=str(error))
 
+@user_router.get("/allUsers", dependencies=[Depends(check_jwt_token)])
+async def get_all_users(service: IUserService = Depends(get_user_service)):
+    try:
+        users = service.get_all_users()
+        return users
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 @user_router.post("/verification")
 async def verify_user(user_verification: UserVerification, service: IUserService = Depends(get_user_service)):
