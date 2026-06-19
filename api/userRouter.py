@@ -48,8 +48,8 @@ async def login_user(user: UserLogin, service: IUserService = Depends(get_user_s
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@user_router.get("/profile")
-async def get_user_by_id(user_id: str = Depends(check_jwt_token), service: IUserService = Depends(get_user_service)):
+@user_router.get("/profile/{user_id}")
+async def get_user_by_id(user_id: str, service: IUserService = Depends(get_user_service)):
     try:
         id_str: str = str(user_id)
         user = service.get_user_by_id(id_str)
@@ -64,6 +64,7 @@ async def get_user_by_id(user_id: str = Depends(check_jwt_token), service: IUser
                 "is_private": user.is_private,
                 "history_private": user.history_private,
                 "adult_content": user.adult_content,
+                "birthdate": user.birthdate,
                 "last_connection": user.last_connection,
                 "created_at": user.created_at
             }
@@ -76,6 +77,13 @@ async def get_user_by_id(user_id: str = Depends(check_jwt_token), service: IUser
         print(f"error 3 is {error}")
         raise HTTPException(status_code=400, detail=str(error))
 
+@user_router.get("/allUsers", dependencies=[Depends(check_jwt_token)])
+async def get_all_users(service: IUserService = Depends(get_user_service)):
+    try:
+        users = service.get_all_users()
+        return users
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 @user_router.post("/verification")
 async def verify_user(user_verification: UserVerification, service: IUserService = Depends(get_user_service)):

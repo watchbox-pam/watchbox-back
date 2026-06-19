@@ -81,6 +81,10 @@ class UserService(IUserService):
         user = self.repository.get_user_by_id(id)
         return user
 
+    def get_all_users(self) -> list[User]:
+        users = self.repository.get_all_users()
+        return users
+
     def get_user_by_username(self, username: str) -> Optional[User]:
         user = self.repository.get_user_by_username(username)
         return user

@@ -487,3 +487,36 @@ t_ml_training_counter = Table(
     Column('last_trained_at', DateTime, server_default=text('now()')),
     PrimaryKeyConstraint('id', name='ml_training_counter_pkey')
 )
+
+
+t_quiz_question = Table(
+    'quiz_question', Base.metadata,
+    Column('id', Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
+    Column('genre_slug', String(50), nullable=False),
+    Column('movie_id', Integer, nullable=False),
+    Column('question_type', String(20), nullable=False),
+    Column('question_text', Text, nullable=False),
+    Column('correct_answer', String(255), nullable=False),
+    Column('wrong_answer_1', String(255), nullable=False),
+    Column('wrong_answer_2', String(255), nullable=False),
+    Column('wrong_answer_3', String(255), nullable=False),
+    Column('image_path', String(255)),
+    Column('created_at', DateTime, server_default=text('now()')),
+    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='quiz_question_movie_id_fkey'),
+    PrimaryKeyConstraint('id', name='quiz_question_pkey'),
+    UniqueConstraint('genre_slug', 'movie_id', 'question_type', name='uq_quiz_question_slug_movie_type')
+)
+
+
+t_quiz_score = Table(
+    'quiz_score', Base.metadata,
+    Column('id', Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
+    Column('user_id', Uuid, nullable=False),
+    Column('genre_slug', String(50), nullable=False),
+    Column('total_score', Integer, server_default=text('0'), nullable=False),
+    Column('games_played', Integer, server_default=text('0'), nullable=False),
+    Column('updated_at', DateTime, server_default=text('now()')),
+    ForeignKeyConstraint(['user_id'], ['user.id'], name='quiz_score_user_id_fkey', ondelete='CASCADE'),
+    UniqueConstraint('user_id', 'genre_slug', name='uq_quiz_score_user_genre'),
+    PrimaryKeyConstraint('id', name='quiz_score_pkey')
+)

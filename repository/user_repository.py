@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import Optional, List
 
 from database.db import SessionLocal
 from database.models import User as DBUser
@@ -153,6 +153,33 @@ class UserRepository(IUserRepository):
             print(e)
 
         return user
+
+    def get_all_users(self) -> List[DBUser]:
+        try:
+            with SessionLocal() as session:
+                result = session.query(DBUser).all()
+                users = []
+                for user in result:
+                    users.append(DBUser(
+                        id=user.id,
+                        username=user.username,
+                        email=user.email,
+                        birthdate=user.birthdate,
+                        is_private=user.is_private,
+                        history_private=user.history_private,
+                        adult_content=user.adult_content,
+                        last_connection=user.last_connection,
+                        created_at=user.created_at,
+                        country=user.country,
+                        is_verified=user.is_verified,
+                        country_=user.country_,
+                    ))
+                return users
+
+        except Exception as e:
+            print(e)
+            return []
+
 
 
     def verify_user_by_code(self, user_verification: UserVerification) -> str:

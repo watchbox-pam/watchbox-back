@@ -28,6 +28,9 @@ class IUserRepository(Protocol):
     def delete_user(self, user_id: str) -> bool:
         ...
 
+    def get_all_users(self):
+        ...
+
     def check_password_reset_token(self, password_reset_token: str) -> str:
         ...
 
