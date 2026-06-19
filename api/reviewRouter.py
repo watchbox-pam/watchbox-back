@@ -33,8 +33,8 @@ async def create_review(
     repo: ReviewRepository = Depends(get_review_repository)
 ):
     try:
-        review_creation = service.create_review(review)
-        if review_creation:
+        is_new_rating = service.create_review(review)
+        if is_new_rating:
             new_count = repo.increment_counter()
             if new_count >= TRAINING_THRESHOLD:
                 repo.reset_counter()
@@ -42,9 +42,7 @@ async def create_review(
                     TrainingService(RecommendationRepository(), PlaylistRepository()).build_and_train
                 )
                 print(f"Réentraînement déclenché en arrière-plan après {TRAINING_THRESHOLD} nouveaux ratings")
-            return True
-        else:
-            raise HTTPException(status_code=400, detail="La review n'a pas été ajoutée")
+        return True
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
