@@ -154,7 +154,7 @@ class QuizService(IQuizService):
         for movie in movies:
             (movie_id, title, backdrop, poster,
              director, main_actor, release_year,
-             _original_title, budget, runtime) = movie
+             budget, runtime) = movie
 
             image_path = backdrop or poster
 
@@ -265,7 +265,7 @@ class QuizService(IQuizService):
         questions = []
 
         if compare == "budget":
-            valid = [(m[0], m[1], m[2] or m[3], m[8]) for m in movies if m[8] and m[8] > 0]
+            valid = [(m[0], m[1], m[2] or m[3], m[7]) for m in movies if m[7] and m[7] > 0]
             text = "Quel film a le plus gros budget ?"
             q_type = "biggest_budget"
             reverse = True
@@ -275,7 +275,7 @@ class QuizService(IQuizService):
             q_type = "oldest_film"
             reverse = False
         else:  # runtime
-            valid = [(m[0], m[1], m[2] or m[3], m[9]) for m in movies if m[9] and m[9] > 0]
+            valid = [(m[0], m[1], m[2] or m[3], m[8]) for m in movies if m[8] and m[8] > 0]
             text = "Quel film dure le plus longtemps ?"
             q_type = "longest_film"
             reverse = True

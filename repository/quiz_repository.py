@@ -437,7 +437,7 @@ class QuizRepository(IQuizRepository):
 
     def get_movies_for_genre(self, genre_id: int, limit: Optional[int] = None) -> List[tuple]:
         # Returns, per movie: (id, title, backdrop, poster, director, main_actor,
-        #                       release_year, original_title, budget, runtime)
+        #                       release_year, budget, runtime)
         try:
             with SessionLocal() as session:
                 stmt = (
@@ -449,7 +449,6 @@ class QuizRepository(IQuizRepository):
                         func.max(case((t_credit.c.job_id == JOB_ID_DIRECTOR, Person.name))).label("director"),
                         func.max(case((and_(t_credit.c.job_id == JOB_ID_ACTOR, t_credit.c.order == 0), Person.name))).label("main_actor"),
                         cast(func.extract("year", Movie.release_date), Integer).label("release_year"),
-                        Movie.original_title,
                         Movie.budget,
                         Movie.runtime,
                     )
@@ -475,7 +474,7 @@ class QuizRepository(IQuizRepository):
                     )
                     .group_by(
                         Movie.id, Movie.title, Movie.backdrop_path, Movie.poster_path,
-                        Movie.release_date, Movie.original_title, Movie.popularity,
+                        Movie.release_date, Movie.popularity,
                         Movie.budget, Movie.runtime,
                     )
                 )
