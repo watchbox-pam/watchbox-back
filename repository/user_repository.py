@@ -1,6 +1,8 @@
 import datetime
 from typing import Optional, List
 
+from sqlalchemy import false
+
 from database.db import SessionLocal
 from database.models import User as DBUser
 from domain.interfaces.repositories.i_user_repository import IUserRepository
@@ -36,7 +38,8 @@ class UserRepository(IUserRepository):
                     verification_code=verification_code,
                     verification_code_token=verification_code_token,
                     country_=None,
-                    playlist=[]
+                    playlist=[],
+                    is_admin=False
                 )
                 session.add(new_user)
                 session.commit()
@@ -146,7 +149,8 @@ class UserRepository(IUserRepository):
                         verification_code=result.verification_code,
                         verification_code_token=result.verification_code_token,
                         country_=result.country_,
-                        playlist=result.playlist
+                        playlist=result.playlist,
+                        is_admin=result.is_admin
                     )
 
         except Exception as e:

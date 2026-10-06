@@ -68,10 +68,28 @@ def get_user_by_id(id: str) -> Optional[User]:
                     verification_code=result.verification_code,
                     verification_code_token=result.verification_code_token,
                     country_=result.country_,
-                    playlist=result.playlist
+                    playlist=result.playlist,
+                    is_admin=result.is_admin
                 )
 
     except Exception as e:
         print(e)
 
     return user
+
+def check_admin_user(user_id: str = Depends(check_jwt_token)) -> str:
+    user = get_user_by_id(user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token invalide"
+        )
+
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé aux administrateurs"
+        )
+
+    return user.id

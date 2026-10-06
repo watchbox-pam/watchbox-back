@@ -23,6 +23,7 @@ class User:
     password_reset_token: str
     last_connection: datetime
     created_at: datetime
+    is_admin: bool = False
 
 
 @dataclass(frozen=True)

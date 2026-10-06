@@ -17,7 +17,7 @@ class IUserService(Protocol):
     def get_user_by_email(self, email: str) -> Optional[User]:
         ...
 
-    def login_user(self, user: UserLogin) -> dict[str, str]:
+    def login_user(self, user: UserLogin) -> dict:
         ...
 
     def get_user_by_id(self, id: str) -> Optional[User]:
