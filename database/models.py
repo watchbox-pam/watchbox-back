@@ -2,7 +2,7 @@ from typing import Optional
 import datetime
 import uuid
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, Column, Date, DateTime, Double, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, String, Table, Text, UniqueConstraint, Uuid, text
+from sqlalchemy import ARRAY, BigInteger, Boolean, Column, Date, DateTime, Double, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, String, Table, Text, UniqueConstraint, Uuid, text, Index
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -169,13 +169,16 @@ class Tv(Base):
     original_name: Mapped[Optional[str]] = mapped_column(String)
     overview: Mapped[Optional[str]] = mapped_column(Text)
     poster_path: Mapped[Optional[str]] = mapped_column(Text)
-    release_date: Mapped[Optional[datetime.date]] = mapped_column(Date)
     revenue: Mapped[Optional[int]] = mapped_column(Integer)
     runtime: Mapped[Optional[int]] = mapped_column(Integer)
     status: Mapped[Optional[str]] = mapped_column(String)
     tagline: Mapped[Optional[str]] = mapped_column(Text)
-    title: Mapped[Optional[str]] = mapped_column(String)
+    type: Mapped[Optional[str]] = mapped_column(String)
     video: Mapped[Optional[bool]] = mapped_column(Boolean)
+    popularity: Mapped[Optional[float]] = mapped_column(Double(53))
+    vote_average: Mapped[Optional[float]] = mapped_column(Double(53))
+    vote_count: Mapped[Optional[int]] = mapped_column(Integer)
+    infos_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
 
     genre: Mapped[list['TvGenre']] = relationship('TvGenre', secondary='tv_tv_genre', back_populates='tv')
     person: Mapped[list['Person']] = relationship('Person', secondary='tv_created_by', back_populates='tv')
@@ -214,7 +217,8 @@ t_media_keyword = Table(
     Column('movie_id', Integer),
     Column('tv_id', Integer),
     ForeignKeyConstraint(['keyword_id'], ['keyword.id'], name='media_keyword_keyword_id_fkey'),
-    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='media_keyword_movie_id_fkey')
+    ForeignKeyConstraint(['movie_id'], ['movie.id'], name='media_keyword_movie_id_fkey'),
+    ForeignKeyConstraint(['tv_id'], ['tv.id'], name='media_keyword_tv_id_fkey')
 )
 
 
@@ -313,6 +317,7 @@ class TvSeason(Base):
     poster_path: Mapped[Optional[str]] = mapped_column(String)
     season_number: Mapped[Optional[int]] = mapped_column(Integer)
     tv_id: Mapped[Optional[int]] = mapped_column(Integer)
+    vote_average: Mapped[Optional[float]] = mapped_column(Double(53))
 
     tv: Mapped[Optional['Tv']] = relationship('Tv', back_populates='tv_season')
     tv_episode: Mapped[list['TvEpisode']] = relationship('TvEpisode', back_populates='season')
@@ -413,6 +418,8 @@ class TvEpisode(Base):
     runtime: Mapped[Optional[int]] = mapped_column(Integer)
     still_path: Mapped[Optional[str]] = mapped_column(String)
     season_id: Mapped[Optional[str]] = mapped_column(String)
+    vote_average: Mapped[Optional[float]] = mapped_column(Double(53))
+    tv_id: Mapped[Optional[int]] = mapped_column(Integer)
 
     season: Mapped[Optional['TvSeason']] = relationship('TvSeason', back_populates='tv_episode')
 
@@ -432,7 +439,9 @@ t_credit = Table(
     ForeignKeyConstraint(['movie_id'], ['movie.id'], name='credit_movie_id_fkey'),
     ForeignKeyConstraint(['person_id'], ['person.id'], name='credit_person_id_fkey'),
     ForeignKeyConstraint(['tv_episode_id'], ['tv_episode.id'], name='credit_tv_episode_id_fkey'),
-    ForeignKeyConstraint(['type'], ['credit_type.id'], name='credit_type_fkey')
+    ForeignKeyConstraint(['type'], ['credit_type.id'], name='credit_type_fkey'),
+    ForeignKeyConstraint(['tv_id'], ['tv.id'], name='credit_tv_id_fkey'),
+    ForeignKeyConstraint(['tv_season_id'], ['tv_season.id'], name='credit_tv_season_id_fkey')
 )
 
 
@@ -444,7 +453,9 @@ t_playlist_media = Table(
     Column('add_date', DateTime, server_default=text('now()')),
     ForeignKeyConstraint(['movie_id'], ['movie.id'], name='playlist_media_movie_id_fkey'),
     ForeignKeyConstraint(['playlist_id'], ['playlist.id'], name='playlist_media_playlist_id_fkey', ondelete='CASCADE'),
-    ForeignKeyConstraint(['tv_id'], ['tv.id'], name='playlist_media_tv_id_fkey')
+    ForeignKeyConstraint(['tv_id'], ['tv.id'], name='playlist_media_tv_id_fkey'),
+    Index('uq_playlist_media_movie', 'playlist_id', 'movie_id', unique=True, postgresql_where=text('movie_id IS NOT NULL')),
+    Index('uq_playlist_media_tv', 'playlist_id', 'tv_id', unique=True, postgresql_where=text('tv_id IS NOT NULL')),
 )
 
 
