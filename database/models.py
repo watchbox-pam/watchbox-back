@@ -327,6 +327,14 @@ t_tv_tv_genre = Table(
     PrimaryKeyConstraint('tv_id', 'genre_id', name='tv_tv_genre_pkey')
 )
 
+t_follower = Table(
+    'follower', Base.metadata,
+    Column('sender_id', Uuid, nullable=False),
+    Column('receiver_id', Uuid, nullable=False),
+    Column('followed_at', DateTime, server_default=text('now()'), nullable=False),
+    ForeignKeyConstraint(['receiver_id'], ['user.id'], name='follower_receiver_id_fkey'),
+    ForeignKeyConstraint(['sender_id'], ['user.id'], name='follower_sender_id_fkey')
+)
 
 class User(Base):
     __tablename__ = 'user'
@@ -351,7 +359,7 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
     country: Mapped[Optional[str]] = mapped_column(String)
     profile_picture_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers l'image de profil de l'utilisateur")
-    banner_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers la banniere de l'utilisateur")
+    banner_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers la bannière de l'utilisateur")
     password_reset_token: Mapped[Optional[str]] = mapped_column(String)
     verification_code: Mapped[Optional[str]] = mapped_column(String)
     verification_code_token: Mapped[Optional[str]] = mapped_column(String)
@@ -359,16 +367,25 @@ class User(Base):
     country_: Mapped[Optional['Country']] = relationship('Country', back_populates='user')
     playlist: Mapped[list['Playlist']] = relationship('Playlist', back_populates='user', cascade='all, delete-orphan')
 
+    following: Mapped[list['User']] = relationship(
+        'User',
+        secondary=t_follower,
+        primaryjoin=id == t_follower.c.sender_id,
+        secondaryjoin=id == t_follower.c.receiver_id,
+        back_populates='followers',
+        default_factory=list,
+        init=False
+    )
 
-t_friend = Table(
-    'friend', Base.metadata,
-    Column('sender_id', Uuid, nullable=False),
-    Column('receiver_id', Uuid, nullable=False),
-    Column('is_pending', Boolean, nullable=False),
-    Column('sent_at', DateTime, nullable=False),
-    ForeignKeyConstraint(['receiver_id'], ['user.id'], name='friend_receiver_id_fkey'),
-    ForeignKeyConstraint(['sender_id'], ['user.id'], name='friend_sender_id_fkey')
-)
+    followers: Mapped[list['User']] = relationship(
+        'User',
+        secondary=t_follower,
+        primaryjoin=id == t_follower.c.receiver_id,
+        secondaryjoin=id == t_follower.c.sender_id,
+        back_populates='following',
+        default_factory=list,
+        init=False
+    )
 
 
 class Playlist(Base):

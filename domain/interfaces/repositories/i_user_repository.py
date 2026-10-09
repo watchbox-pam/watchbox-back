@@ -42,3 +42,6 @@ class IUserRepository(Protocol):
 
     def get_password_reset_token(self, user_id: str) -> str:
         ...
+
+    def follow_user(self, current_user_id: str, user_id_to_follow: str) -> bool:
+        ...

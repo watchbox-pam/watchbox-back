@@ -1,6 +1,8 @@
 import datetime
 from typing import Optional, List
 
+from sqlalchemy import select, exists, delete, insert
+
 from database.db import SessionLocal
 from database.models import User as DBUser
 from domain.interfaces.repositories.i_user_repository import IUserRepository
@@ -8,6 +10,7 @@ from domain.models.user import User
 from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
 from domain.models.userVerification import UserVerification
+from database.models import t_follower
 
 class UserRepository(IUserRepository):
     def create_user(self, user: UserSignup, password_reset_token: str, verification_code: str, verification_code_token: str) -> bool:
@@ -123,7 +126,7 @@ class UserRepository(IUserRepository):
         user: Optional[DBUser] = None
         try:
             with SessionLocal() as session:
-                result = session.query(DBUser).filter(DBUser.id == id).first()
+                return session.query(DBUser).filter(DBUser.id == id).first()
 
                 if result is not None:
                     user = DBUser(
@@ -146,7 +149,9 @@ class UserRepository(IUserRepository):
                         verification_code=result.verification_code,
                         verification_code_token=result.verification_code_token,
                         country_=result.country_,
-                        playlist=result.playlist
+                        playlist=result.playlist,
+                        following=result.following,
+                        followers=result.followers
                     )
 
         except Exception as e:
@@ -290,3 +295,30 @@ class UserRepository(IUserRepository):
         except Exception as e:
             print(e)
             return ""
+
+
+    def follow_user(self, current_user_id: str, user_id_to_follow: str) -> bool:
+        try:
+            with SessionLocal() as session:
+                stmt_exists = select(
+                    exists().where(
+                        t_follower.c.sender_id == current_user_id,
+                        t_follower.c.receiver_id == user_id_to_follow
+                    )
+                )
+                is_following = session.execute(stmt_exists).scalar()
+
+                if is_following:
+                    execution_stmt = delete(t_follower).where(
+                        t_follower.c.sender_id == current_user_id,
+                        t_follower.c.receiver_id == user_id_to_follow,
+                    )
+                else:
+                    execution_stmt = insert(t_follower).values(sender_id=current_user_id, receiver_id=user_id_to_follow)
+
+                session.execute(execution_stmt)
+                session.commit()
+            return True
+        except Exception as e:
+            print("An error occured in repository : " + str(e))
+            return False

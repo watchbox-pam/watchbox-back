@@ -53,6 +53,7 @@ async def get_user_by_id(user_id: str, service: IUserService = Depends(get_user_
     try:
         id_str: str = str(user_id)
         user = service.get_user_by_id(id_str)
+        print(user)
         if user:
             return {
                 "id": user.id,
@@ -179,6 +180,24 @@ async def reset_password(new_password: UserPassword, service: IUserService = Dep
 async def get_reset_password_token(user_id: str = Depends(check_jwt_token), service: IUserService = Depends(get_user_service)):
     try:
         result = service.get_password_reset_token(user_id)
+        return result
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+class UserIdToFollow(BaseModel):
+    userId: str
+
+@user_router.post("/follow")
+async def follow_user(user_id_to_follow: UserIdToFollow,
+                      current_user_id: str = Depends(check_jwt_token),
+                      service: IUserService = Depends(get_user_service)):
+    try:
+        print("current user " + str(current_user_id))
+        print("to follow " + str(user_id_to_follow.userId))
+        result = service.follow_user(current_user_id, user_id_to_follow.userId)
+        if not result:
+            raise Exception("An error occured while following the user")
         return result
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))

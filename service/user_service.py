@@ -211,3 +211,6 @@ class UserService(IUserService):
 
     def get_password_reset_token(self, user_id: str) -> str:
         return self.repository.get_password_reset_token(user_id)
+
+    def follow_user(self, user_id: str, id_to_follow: str) -> bool:
+        return self.repository.follow_user(user_id, id_to_follow)

@@ -1,6 +1,9 @@
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import List
+
+from domain.models.follower import Follower
 
 
 @dataclass(frozen=True)
@@ -23,6 +26,8 @@ class User:
     password_reset_token: str
     last_connection: datetime
     created_at: datetime
+    following: List[Follower]
+    followers: List[Follower]
 
 
 @dataclass(frozen=True)
