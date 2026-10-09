@@ -11,7 +11,7 @@ from database.models import Playlist as DBPlaylist
 from database.models import User as DBUser
 from database.models import t_playlist_media
 from database.models import Movie as DBMovie
-from sqlalchemy import select, insert, delete
+from sqlalchemy import select, insert, delete, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from utils.tmdb_service import call_tmdb_api
 
@@ -215,6 +215,26 @@ class PlaylistRepository(IPlaylistRepository):
 
         return success
 
+    def touch_media_in_playlist(self, playlist_id: str, media_id: int) -> bool:
+        """Refresh add_date to now() so an already-present movie moves back to the
+        top of the playlist (most-recent-first ordering) without inserting a duplicate."""
+        success: bool = False
+        try:
+            with SessionLocal() as session:
+                session.execute(
+                    update(t_playlist_media)
+                    .where(
+                        (t_playlist_media.c.playlist_id == playlist_id) &
+                        (t_playlist_media.c.movie_id == media_id)
+                    )
+                    .values(add_date=datetime.datetime.now())
+                )
+                session.commit()
+                success = True
+        except Exception as e:
+            print(e)
+        return success
+
     def media_exists_in_playlist(self, playlist_id: str, media_id: int) -> bool:
         try:            
             with SessionLocal() as session:
@@ -247,6 +267,7 @@ class PlaylistRepository(IPlaylistRepository):
                             DBPlaylist, t_playlist_media.c.playlist_id == DBPlaylist.id
                         )
                     ).where(DBPlaylist.id == playlist_id)
+                    .order_by(t_playlist_media.c.add_date.desc().nulls_last())
                 ).fetchall()
 
                 for result in results:

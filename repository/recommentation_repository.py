@@ -32,7 +32,10 @@ class RecommendationRepository(IRecommendationRepository):
                         for result in results:
                             credits = []
                             for credit in result[3]:
-                                credits.append({"person_id": credit[0], "job_id": credit[1]})
+                                credits.append({
+                                    "person_id": int(credit[0]),
+                                    "job_id": int(credit[1]) if credit[1] is not None else None
+                                })
                             medias.append(MovieRecommendation(
                                 id=result[0],
                                 genres=result[1],
@@ -71,7 +74,10 @@ class RecommendationRepository(IRecommendationRepository):
                         for result in results:
                             credits = []
                             for credit in result[6]:
-                                credits.append({"person_id": credit[0], "job_id": credit[1]})
+                                credits.append({
+                                    "person_id": int(credit[0]),
+                                    "job_id": int(credit[1]) if credit[1] is not None else None
+                                })
                             medias.append(MovieRecommendation(
                                 id=result[0],
                                 popularity=result[1],

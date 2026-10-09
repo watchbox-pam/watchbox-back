@@ -11,6 +11,8 @@ from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
 from domain.models.movieReview import MovieReview
 from service.ml_state import get_ml
 
+SKIP_PENALTY = 0.5
+
 
 class RecommendationService(IRecommendationService):
     def __init__(self, repository: IRecommendationRepository, playlist_repository: IPlaylistRepository):
@@ -81,8 +83,10 @@ class RecommendationService(IRecommendationService):
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
-    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False) -> List[MovieRecommendation]:
+    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False, seen_set: set | None = None) -> List[MovieRecommendation]:
         genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion], include_adult)
+        if seen_set:
+            genre_medias = [m for m in genre_medias if m.id not in seen_set]
         for media in genre_medias:
             media.weight = media.popularity
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
@@ -113,7 +117,8 @@ class RecommendationService(IRecommendationService):
         swipe_ids      = f_swipes.result()
         genre_medias   = f_genres.result()
 
-        exclude_set = set(exclude_ids or []) | set(skip_ids)
+        skip_set = set(skip_ids)
+        exclude_set = set(exclude_ids or [])
 
         user_watchlist_id = user_history_id = user_favorites_id = ""
         for item in user_playlists:
@@ -192,24 +197,17 @@ class RecommendationService(IRecommendationService):
                     elif c["job_id"] == 537:
                         director_weights[c["person_id"]] += 20
 
-        # Exclure historique + exclude_ids
-        history_set = set(history_ids)
-        if history_set or exclude_set:
-            genre_medias = [
-                m for m in genre_medias
-                if (m.id not in history_set and m.id not in exclude_set)
-            ]
+        seen_set = set(history_ids) | set(favorites_ids) | set(watchlist_ids) | exclude_set
+        if seen_set:
+            genre_medias = [m for m in genre_medias if m.id not in seen_set]
 
         candidate_ids = [m.id for m in genre_medias]
 
         if not genre_medias:
-            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult, seen_set=seen_set)
 
-        watchlist_set = set(watchlist_ids)
         for media in genre_medias:
             media.weight = len(media.genres)
-            if media.id in watchlist_set:
-                media.weight += 10
             for kw in media.keywords:
                 media.weight += kw_weights.get(kw, 0)
             for c in media.credits:
@@ -235,10 +233,12 @@ class RecommendationService(IRecommendationService):
                 + als_scores.get(media.id, 0.0) * w_als
                 + content_scores.get(media.id, 0.0) * w_content
             )
+            if media.id in skip_set:
+                media.weight *= SKIP_PENALTY
 
         genre_medias = sorted(genre_medias, key=lambda x: x.popularity, reverse=True)
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
 
         pool_size = max(30, limit * 3)
-        diversified = self._diversify(genre_medias[:pool_size], top_n=limit, diversity_penalty=0.3)
+        diversified = self._diversify(genre_medias[:pool_size], top_n=limit, diversity_penalty=0.5)
         return diversified[:limit]

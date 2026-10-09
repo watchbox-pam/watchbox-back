@@ -5,8 +5,8 @@ from domain.models.movie import PopularMovieList, MovieDetail
 from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
 from database.db import SessionLocal
-from database.models import Movie as DBMovie
-from sqlalchemy import func
+from database.models import Movie as DBMovie, Playlist as DBPlaylist, t_swipe, t_review, t_playlist_media
+from sqlalchemy import func, exists
 
 class MovieRepository(IMovieRepository):
     def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[MovieDetail]:
@@ -110,7 +110,7 @@ class MovieRepository(IMovieRepository):
             print(f"[ERREUR] Exception dans movie_runtime : {e}")
             return 0
 
-    def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
+    def get_random_movies(self, count: int = 50, include_adult: bool = False, user_id=None) -> Optional[List[MovieListItem]]:
 
         movies: List[DBMovie] = []
 
@@ -119,6 +119,18 @@ class MovieRepository(IMovieRepository):
                 query = session.query(DBMovie).filter(DBMovie.popularity >= 70)
                 if not include_adult:
                     query = query.filter((DBMovie.adult == False) | (DBMovie.adult == None))
+                if user_id is not None:
+                    # Exclut les films déjà jugés : swipés (like/dislike/skip — la contrainte
+                    # uq_swipe_user_movie empêcherait de les re-swiper), notés, ou dans une playlist.
+                    query = query.filter(
+                        ~exists().where(t_swipe.c.user_id == user_id, t_swipe.c.movie_id == DBMovie.id),
+                        ~exists().where(t_review.c.user_id == user_id, t_review.c.movie_id == DBMovie.id),
+                        ~exists().where(
+                            t_playlist_media.c.playlist_id == DBPlaylist.id,
+                            DBPlaylist.user_id == user_id,
+                            t_playlist_media.c.movie_id == DBMovie.id,
+                        ),
+                    )
                 results = query.order_by(func.random()).limit(count).all()
                 for result in results:
                     movies.append(MovieListItem(
