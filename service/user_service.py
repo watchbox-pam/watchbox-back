@@ -77,13 +77,6 @@ class UserService(IUserService):
         else:
             raise Exception("La création de l'utilisateur a échoué")
 
-    def get_user_by_id(self, id: str) -> Optional[User]:
-        user = self.repository.get_user_by_id(id)
-        return user
-
-    def get_all_users(self) -> list[User]:
-        users = self.repository.get_all_users()
-        return users
 
     def get_user_by_username(self, username: str) -> Optional[User]:
         user = self.repository.get_user_by_username(username)
@@ -95,7 +88,7 @@ class UserService(IUserService):
         return user
 
 
-    def login_user(self, user: UserLogin) -> dict[str, str]:
+    def login_user(self, user: UserLogin) -> dict:
         user_exists: User
         if "@" in user.identifier:
             # Check if email exists in base
@@ -116,8 +109,15 @@ class UserService(IUserService):
         hashed_password = sha256((salted_password + pepper).encode('utf-8'))
 
         if hashed_password.hexdigest() == user_exists.password:
-            user_token = create_jwt_token({ "user_id": str(user_exists.id) })
-            return { "user_id": str(user_exists.id), "token": user_token, "username": user_exists.username }
+            user_token = create_jwt_token({
+                "user_id": str(user_exists.id)
+            })
+
+            return {
+                "user_id": str(user_exists.id),
+                "token": user_token,
+                "username": user_exists.username
+            }
         else:
             raise Exception("Mot de passe incorrect")
 
