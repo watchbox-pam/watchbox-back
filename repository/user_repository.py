@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional, List
+from typing import Optional
 
 from sqlalchemy import false
 
@@ -38,8 +38,7 @@ class UserRepository(IUserRepository):
                     verification_code=verification_code,
                     verification_code_token=verification_code_token,
                     country_=None,
-                    playlist=[],
-                    is_admin=False
+                    playlist=[]
                 )
                 session.add(new_user)
                 session.commit()
@@ -149,8 +148,7 @@ class UserRepository(IUserRepository):
                         verification_code=result.verification_code,
                         verification_code_token=result.verification_code_token,
                         country_=result.country_,
-                        playlist=result.playlist,
-                        is_admin=result.is_admin
+                        playlist=result.playlist
                     )
 
         except Exception as e:
@@ -158,31 +156,6 @@ class UserRepository(IUserRepository):
 
         return user
 
-    def get_all_users(self) -> List[DBUser]:
-        try:
-            with SessionLocal() as session:
-                result = session.query(DBUser).all()
-                users = []
-                for user in result:
-                    users.append(DBUser(
-                        id=user.id,
-                        username=user.username,
-                        email=user.email,
-                        birthdate=user.birthdate,
-                        is_private=user.is_private,
-                        history_private=user.history_private,
-                        adult_content=user.adult_content,
-                        last_connection=user.last_connection,
-                        created_at=user.created_at,
-                        country=user.country,
-                        is_verified=user.is_verified,
-                        country_=user.country_,
-                    ))
-                return users
-
-        except Exception as e:
-            print(e)
-            return []
 
 
 

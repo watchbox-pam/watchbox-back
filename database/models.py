@@ -355,7 +355,6 @@ class User(Base):
     password_reset_token: Mapped[Optional[str]] = mapped_column(String)
     verification_code: Mapped[Optional[str]] = mapped_column(String)
     verification_code_token: Mapped[Optional[str]] = mapped_column(String)
-    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
 
     country_: Mapped[Optional['Country']] = relationship('Country', back_populates='user')
     playlist: Mapped[list['Playlist']] = relationship('Playlist', back_populates='user', cascade='all, delete-orphan')

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from api.SearchRouter import search_router
-from api.admin_router import admin_router
+from api.admin import admin_router
 from api.quizRouter import quiz_router
 from api.auth.verify_auth_token import check_jwt_token
 from api.countryRouter import country_router

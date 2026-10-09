@@ -78,10 +78,6 @@ class UserService(IUserService):
             raise Exception("La création de l'utilisateur a échoué")
 
 
-    def get_all_users(self) -> list[User]:
-        users = self.repository.get_all_users()
-        return users
-
     def get_user_by_username(self, username: str) -> Optional[User]:
         user = self.repository.get_user_by_username(username)
         return user
@@ -114,15 +110,13 @@ class UserService(IUserService):
 
         if hashed_password.hexdigest() == user_exists.password:
             user_token = create_jwt_token({
-                "user_id": str(user_exists.id),
-                "is_admin": user_exists.is_admin
+                "user_id": str(user_exists.id)
             })
 
             return {
                 "user_id": str(user_exists.id),
                 "token": user_token,
-                "username": user_exists.username,
-                "is_admin": user_exists.is_admin
+                "username": user_exists.username
             }
         else:
             raise Exception("Mot de passe incorrect")
