@@ -1,6 +1,6 @@
 from datetime import date
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from domain.models.genre import Genre
 from domain.models.keyword import Keyword
@@ -17,3 +17,4 @@ class MovieRecommendation:
     genres: List[Genre]
     keywords: List[Keyword]
     credits: List[PersonDetail]
+    release_year: Optional[int] = None
