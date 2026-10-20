@@ -1,4 +1,5 @@
 import statistics
+from datetime import date
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
@@ -7,11 +8,14 @@ from domain.interfaces.repositories.i_playlist_repository import IPlaylistReposi
 from domain.interfaces.repositories.i_recommendation_repository import IRecommendationRepository
 from domain.interfaces.services.i_recommendation_service import IRecommendationService
 from domain.models.movieRecommendation import MovieRecommendation
-from domain.models.emotion import Emotion, EMOTION_GENRE_MAPPING
+from domain.models.emotion import Emotion, EMOTION_GENRES, emotions_of
 from domain.models.movieReview import MovieReview
 from service.ml_state import get_ml
 
 SKIP_PENALTY = 0.5
+EMOTION_WEIGHT = 0.3
+NOSTALGIA_AGE_RANGE = (5, 15)
+NOSTALGIA_FADE_YEARS = 5
 
 
 class RecommendationService(IRecommendationService):
@@ -77,18 +81,51 @@ class RecommendationService(IRecommendationService):
                 candidates.remove(best)
         return selected
 
+    def _childhood_fit(self, release_year: int | None, birth_year: int | None) -> float | None:
+        if release_year is None or birth_year is None:
+            return None
+        age = release_year - birth_year
+        age_min, age_max = NOSTALGIA_AGE_RANGE
+        if age_min <= age <= age_max:
+            return 1.0
+        distance = age_min - age if age < age_min else age - age_max
+        return max(0.0, 1 - distance / NOSTALGIA_FADE_YEARS)
+
+    def _emotion_score(self, media: MovieRecommendation, emotion: Emotion, birth_year: int | None) -> float:
+        # Adéquation du film avec l'humeur, dans [0, 1].
+        emotion_genres = EMOTION_GENRES[emotion]
+        film_genres = set(media.genres)
+        n_core = len(film_genres & set(emotion_genres.core))
+        n_secondary = len(film_genres & set(emotion_genres.secondary))
+        genre_fit = min(1.0, (n_core + 0.5 * n_secondary) / 2)
+        if emotion == Emotion.NOSTALGIE:
+            childhood = self._childhood_fit(media.release_year, birth_year)
+            if childhood is not None:
+                return 0.4 * genre_fit + 0.6 * childhood
+        return genre_fit
+
+    def _find_emotion_candidates(self, emotion: Emotion, include_adult: bool) -> List[MovieRecommendation]:
+        movie_ids = [movie_id for movie_id, genres in self.repository.get_movie_genres().items() if emotion in emotions_of(genres)]
+        return self.repository.find_candidates(movie_ids, include_adult)
+
     def _is_cold_start(self, user_id: str, watchlist_ids: list, history_ids: list, favorites_ids: list) -> bool:
         ml = get_ml()
         no_ml = not ml or user_id not in ml.user_index
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
-    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False, seen_set: set | None = None) -> List[MovieRecommendation]:
-        genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion], include_adult)
+    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False, seen_set: set | None = None, birth_year: int | None = None) -> List[MovieRecommendation]:
+        genre_medias = self._find_emotion_candidates(emotion, include_adult)
         if seen_set:
             genre_medias = [m for m in genre_medias if m.id not in seen_set]
         for media in genre_medias:
-            media.weight = media.popularity
+            media.weight = media.popularity or 0
+        popularity_scores = self._normalize(genre_medias)
+        for media in genre_medias:
+            media.weight = (
+                popularity_scores.get(media.id, 0.0) * (1 - EMOTION_WEIGHT)
+                + self._emotion_score(media, emotion, birth_year) * EMOTION_WEIGHT
+            )
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
         return self._diversify(genre_medias[:50], top_n=limit, diversity_penalty=0.6)[:limit]
 
@@ -110,12 +147,16 @@ class RecommendationService(IRecommendationService):
             f_skip      = ex.submit(self.repository.get_skip_movie_ids, user_id)
             f_playlists = ex.submit(self.playlist_repository.get_playlists_by_user_id, user_id)
             f_swipes    = ex.submit(self.repository.get_swipe_movie_ids, user_id)
-            f_genres    = ex.submit(self.repository.find_by_genres, EMOTION_GENRE_MAPPING[emotion], include_adult)
+            f_genres    = ex.submit(self._find_emotion_candidates, emotion, include_adult)
+            f_birth     = ex.submit(self.repository.get_user_birth_year, user_id)
 
         skip_ids       = f_skip.result()
         user_playlists = f_playlists.result()
         swipe_ids      = f_swipes.result()
         genre_medias   = f_genres.result()
+        birth_year     = f_birth.result()
+        if birth_year is not None and date.today().year - birth_year < NOSTALGIA_AGE_RANGE[1]:
+            birth_year = None
 
         skip_set = set(skip_ids)
         exclude_set = set(exclude_ids or [])
@@ -146,7 +187,7 @@ class RecommendationService(IRecommendationService):
 
         if self._is_cold_start(user_id, watchlist_ids, history_ids, favorites_ids):
             print(f"Cold start détecté pour user {user_id}")
-            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult, birth_year=birth_year)
 
         # Phase 3 : données de contenu en parallèle
         with ThreadPoolExecutor() as ex:
@@ -204,10 +245,10 @@ class RecommendationService(IRecommendationService):
         candidate_ids = [m.id for m in genre_medias]
 
         if not genre_medias:
-            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult, seen_set=seen_set)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult, seen_set=seen_set, birth_year=birth_year)
 
         for media in genre_medias:
-            media.weight = len(media.genres)
+            media.weight = 0
             for kw in media.keywords:
                 media.weight += kw_weights.get(kw, 0)
             for c in media.credits:
@@ -228,10 +269,14 @@ class RecommendationService(IRecommendationService):
             als_scores = ml.predict_als(user_id, candidate_ids)
 
         for media in genre_medias:
-            media.weight = (
+            taste_score = (
                 svd_scores.get(media.id, 0.0) * w_svd
                 + als_scores.get(media.id, 0.0) * w_als
                 + content_scores.get(media.id, 0.0) * w_content
+            )
+            media.weight = (
+                taste_score * (1 - EMOTION_WEIGHT)
+                + self._emotion_score(media, emotion, birth_year) * EMOTION_WEIGHT
             )
             if media.id in skip_set:
                 media.weight *= SKIP_PENALTY
