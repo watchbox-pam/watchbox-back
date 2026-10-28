@@ -2,7 +2,7 @@ from typing import Optional
 import datetime
 import uuid
 
-from sqlalchemy import ARRAY, BigInteger, Boolean, Column, Date, DateTime, Double, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, String, Table, Text, UniqueConstraint, Uuid, text, Index
+from sqlalchemy import ARRAY, BigInteger, Boolean, CheckConstraint, Column, Date, DateTime, Double, ForeignKeyConstraint, Identity, Integer, PrimaryKeyConstraint, String, Table, Text, UniqueConstraint, Uuid, text, Index
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -339,20 +339,22 @@ class User(Base):
         ForeignKeyConstraint(['country'], ['country.iso'], name='user_country_fkey'),
         PrimaryKeyConstraint('id', name='user_pkey'),
         UniqueConstraint('email', name='user_email_key'),
-        UniqueConstraint('username', name='user_username_key')
+        UniqueConstraint('username', name='user_username_key'),
+        # Mot de passe et sel : tous les deux remplis (compte classique) ou tous les deux vides (compte Google / Apple)
+        CheckConstraint('(password IS NULL) = (salt IS NULL)', name='user_password_salt_consistency')
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(50), nullable=False)
-    password: Mapped[str] = mapped_column(String(256), nullable=False)
+    password: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
     birthdate: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     is_private: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
     history_private: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
     adult_content: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
     last_connection: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('now()'))
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('now()'))
-    salt: Mapped[str] = mapped_column(String(32), nullable=False)
+    salt: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
     country: Mapped[Optional[str]] = mapped_column(String)
     profile_picture_path: Mapped[Optional[str]] = mapped_column(String(256), comment="Chemin vers l'image de profil de l'utilisateur")
@@ -363,6 +365,25 @@ class User(Base):
 
     country_: Mapped[Optional['Country']] = relationship('Country', back_populates='user')
     playlist: Mapped[list['Playlist']] = relationship('Playlist', back_populates='user', cascade='all, delete-orphan')
+
+
+class UserIdentity(Base):
+    """Compte externe (Google, Apple) rattaché à un utilisateur Watchbox."""
+    __tablename__ = 'user_identity'
+    __table_args__ = (
+        ForeignKeyConstraint(['user_id'], ['user.id'], ondelete='CASCADE', name='user_identity_user_id_fkey'),
+        PrimaryKeyConstraint('id', name='user_identity_pkey'),
+        # Un compte Google / Apple ne peut être rattaché qu'à un seul utilisateur
+        UniqueConstraint('provider', 'provider_user_id', name='user_identity_provider_subject_key'),
+        # Un utilisateur a au plus un compte par fournisseur
+        UniqueConstraint('user_id', 'provider', name='user_identity_user_provider_key')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True, init=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    provider: Mapped[str] = mapped_column(String(20), nullable=False, comment="'google' ou 'apple'")
+    provider_user_id: Mapped[str] = mapped_column(String(255), nullable=False, comment="Identifiant unique et définitif du compte chez le fournisseur (claim sub)")
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, server_default=text('now()'), init=False)
 
 
 t_friend = Table(
