@@ -7,6 +7,13 @@ import uuid
 from api.auth.verify_auth_token import check_jwt_token
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.interfaces.services.i_user_service import IUserService
+from domain.models.authErrors import (
+    AccountConflictError,
+    ExternalAuthUnavailableError,
+    InvalidExternalTokenError,
+    InvalidRegistrationTokenError,
+)
+from domain.models.googleRegistration import GoogleRegistration
 from domain.models.userLogin import UserLogin
 from domain.models.userPassword import UserPassword
 from domain.models.userSignup import UserSignup
@@ -44,6 +51,43 @@ async def login_user(user: UserLogin, service: IUserService = Depends(get_user_s
             return result
         else:
             raise HTTPException(status_code=400, detail="La connexion a échoué")
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
+@user_router.post("/auth/google")
+def login_with_google(request: GoogleLoginRequest, service: IUserService = Depends(get_user_service)):
+    """
+    Connexion avec Google. Réponses possibles :
+    - {"status": "logged_in", "user_id", "token", "username"} : même contenu que /users/login
+    - {"status": "registration_required", "registration_token", "email", "suggested_username"} :
+      l'app doit afficher le formulaire de fin d'inscription puis appeler /users/auth/google/register
+    """
+    try:
+        return service.login_with_google(request.id_token)
+    except InvalidExternalTokenError as error:
+        print(f"[GOOGLE AUTH] {error}")
+        raise HTTPException(status_code=401, detail="Connexion Google invalide, veuillez réessayer")
+    except ExternalAuthUnavailableError as error:
+        print(f"[GOOGLE AUTH] {error}")
+        raise HTTPException(status_code=503, detail="La connexion avec Google est momentanément indisponible, réessayez dans quelques instants")
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@user_router.post("/auth/google/register")
+def register_with_google(registration: GoogleRegistration, service: IUserService = Depends(get_user_service)):
+    """Fin de l'inscription avec Google : pseudo, date de naissance et pays. Renvoie le même contenu que /users/login."""
+    try:
+        return service.register_with_google(registration)
+    except InvalidRegistrationTokenError as error:
+        raise HTTPException(status_code=401, detail=str(error))
+    except AccountConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error))
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error))
 
