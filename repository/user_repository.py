@@ -1,10 +1,12 @@
 import datetime
 from typing import Optional
 
-from sqlalchemy import false
+from sqlalchemy import false, func
 
 from database.db import SessionLocal
+from database.models import Country as DBCountry
 from database.models import User as DBUser
+from database.models import UserIdentity as DBUserIdentity
 from domain.interfaces.repositories.i_user_repository import IUserRepository
 from domain.models.user import User
 from domain.models.userPassword import UserPassword
@@ -267,3 +269,132 @@ class UserRepository(IUserRepository):
         except Exception as e:
             print(e)
             return ""
+
+
+    # ---------- Connexion via un fournisseur externe (Google, Apple) ----------
+
+    def get_user_by_provider_identity(self, provider: str, provider_user_id: str) -> Optional[DBUser]:
+        """Utilisateur rattaché à ce compte Google / Apple, ou None."""
+        try:
+            with SessionLocal() as session:
+                return (
+                    session.query(DBUser)
+                    .join(DBUserIdentity, DBUserIdentity.user_id == DBUser.id)
+                    .filter(
+                        DBUserIdentity.provider == provider,
+                        DBUserIdentity.provider_user_id == provider_user_id
+                    )
+                    .first()
+                )
+        except Exception as e:
+            print(e)
+            return None
+
+    def get_user_by_email_insensitive(self, email: str) -> Optional[DBUser]:
+        """Recherche par email sans tenir compte des majuscules (Google renvoie l'email en minuscules)."""
+        try:
+            with SessionLocal() as session:
+                return (
+                    session.query(DBUser)
+                    .filter(func.lower(DBUser.email) == email.lower())
+                    .first()
+                )
+        except Exception as e:
+            print(e)
+            return None
+
+    def country_exists(self, iso: str) -> bool:
+        try:
+            with SessionLocal() as session:
+                return session.query(DBCountry.iso).filter(DBCountry.iso == iso).first() is not None
+        except Exception as e:
+            print(e)
+            return False
+
+    def create_external_user(self, user_id: str, username: str, email: str, birthdate, country: str,
+                             provider: str, provider_user_id: str, password_reset_token: str) -> bool:
+        """Crée l'utilisateur (sans mot de passe) et le rattache à son compte Google / Apple, dans la même transaction."""
+        try:
+            with SessionLocal() as session:
+                now = datetime.datetime.now()
+                # Il faut renseigner la relation country_ avec le vrai pays :
+                # si on passe country_=None, SQLAlchemy vide aussi la colonne country à l'enregistrement
+                country_row = session.get(DBCountry, country)
+                new_user = DBUser(
+                    id=user_id,
+                    username=username,
+                    email=email,
+                    password=None,
+                    salt=None,
+                    birthdate=birthdate,
+                    country=country,
+                    profile_picture_path="default.png",
+                    banner_path="default.png",
+                    is_private=False,
+                    history_private=False,
+                    adult_content=False,
+                    last_connection=now,
+                    created_at=now,
+                    is_verified=True,  # adresse mail déjà vérifiée par Google / Apple
+                    password_reset_token=password_reset_token,
+                    verification_code=None,
+                    verification_code_token=None,
+                    country_=country_row,
+                    playlist=[]
+                )
+                session.add(new_user)
+                session.flush()
+
+                session.add(DBUserIdentity(
+                    user_id=new_user.id,
+                    provider=provider,
+                    provider_user_id=provider_user_id
+                ))
+                session.commit()
+                return True
+        except Exception as e:
+            print(e)
+            return False
+
+    def link_identity(self, user_id: str, provider: str, provider_user_id: str, secure_unverified_account: bool) -> bool:
+        """
+        Rattache un compte Google / Apple à un utilisateur existant (même adresse mail).
+        secure_unverified_account : l'utilisateur existant n'avait jamais validé son adresse mail.
+        Google / Apple prouvent que la personne possède cette adresse : on valide le compte
+        et on supprime l'ancien mot de passe, qui a pu être choisi par quelqu'un d'autre.
+        """
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
+                if user is None:
+                    return False
+
+                session.add(DBUserIdentity(
+                    user_id=user.id,
+                    provider=provider,
+                    provider_user_id=provider_user_id
+                ))
+
+                if secure_unverified_account:
+                    user.is_verified = True
+                    user.password = None
+                    user.salt = None
+                    user.verification_code = None
+                    user.verification_code_token = None
+
+                user.last_connection = datetime.datetime.now()
+                session.commit()
+                return True
+        except Exception as e:
+            print(e)
+            return False
+
+    def update_last_connection(self, user_id: str) -> None:
+        try:
+            with SessionLocal() as session:
+                user = session.query(DBUser).filter(DBUser.id == user_id).first()
+                if user is not None:
+                    user.last_connection = datetime.datetime.now()
+                    session.commit()
+        except Exception as e:
+            print(e)

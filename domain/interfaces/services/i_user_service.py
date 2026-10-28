@@ -1,5 +1,6 @@
 from typing import Protocol, Optional
 
+from domain.models.googleRegistration import GoogleRegistration
 from domain.models.user import User
 from domain.models.userLogin import UserLogin
 from domain.models.userPassword import UserPassword
@@ -42,4 +43,10 @@ class IUserService(Protocol):
         ...
 
     def get_password_reset_token(self, user_id: str) -> str:
+        ...
+
+    def login_with_google(self, id_token: str) -> dict:
+        ...
+
+    def register_with_google(self, registration: GoogleRegistration) -> dict:
         ...
