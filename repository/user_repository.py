@@ -20,6 +20,9 @@ class UserRepository(IUserRepository):
 
         try:
             with SessionLocal() as session:
+                # Il faut renseigner la relation country_ avec le vrai pays :
+                # si on passe country_=None, SQLAlchemy vide aussi la colonne country à l'enregistrement
+                country_row = session.get(DBCountry, user.country) if user.country else None
                 new_user = DBUser(
                     id=user.id,
                     username=user.username,
@@ -39,7 +42,7 @@ class UserRepository(IUserRepository):
                     password_reset_token=password_reset_token,
                     verification_code=verification_code,
                     verification_code_token=verification_code_token,
-                    country_=None,
+                    country_=country_row,
                     playlist=[]
                 )
                 session.add(new_user)

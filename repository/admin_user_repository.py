@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import func
 
 from database.db import SessionLocal
+from database.models import Country as DBCountry
 from database.models import Playlist as DBPlaylist
 from database.models import User as DBUser
 from domain.interfaces.repositories.i_admin_user_repository import IAdminUserRepository
@@ -57,6 +58,11 @@ class AdminUserRepository(IAdminUserRepository):
         with SessionLocal() as session:
             now = datetime.datetime.now()
 
+            # Il faut renseigner la relation country_ avec le vrai pays :
+            # si on passe country_=None, SQLAlchemy vide aussi la colonne country à l'enregistrement
+            country = data.get("country")
+            country_row = session.get(DBCountry, country) if country else None
+
             user = DBUser(
                 **data,
                 id=uuid.uuid4(),
@@ -65,7 +71,7 @@ class AdminUserRepository(IAdminUserRepository):
                 password_reset_token=None,
                 verification_code=None,
                 verification_code_token=None,
-                country_=None,
+                country_=country_row,
                 playlist=[],
             )
 
