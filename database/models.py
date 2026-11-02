@@ -116,7 +116,7 @@ class Movie(Base):
     tagline: Mapped[Optional[str]] = mapped_column(Text)
     title: Mapped[Optional[str]] = mapped_column(String)
     popularity: Mapped[Optional[float]] = mapped_column(Double(53))
-    video: Mapped[Optional[str]] = mapped_column(String)
+    video: Mapped[Optional[bool]] = mapped_column(Boolean)
     infos_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('false'))
 
     genre: Mapped[list['MovieGenre']] = relationship('MovieGenre', secondary='movie_movie_genre', back_populates='movie')

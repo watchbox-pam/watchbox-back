@@ -5,14 +5,35 @@ from domain.models.movie import PopularMovieList, MovieDetail
 from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
 from database.db import SessionLocal
-from database.models import Movie as DBMovie
-from sqlalchemy import func
+from database.models import Movie as DBMovie, MovieGenre, t_movie_movie_genre
+from datetime import date
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import selectinload
+from utils.background_save import save_in_background
+
+import logging
+logger = logging.getLogger(__name__)
+
+def _parse_date(s: str | None) -> date | None:
+    try:
+        return date.fromisoformat(s) if s else None
+    except ValueError:
+        return None
 
 class MovieRepository(IMovieRepository):
     def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[MovieDetail]:
-        endpoint = f"/movie/{movie_id}?language=fr-FR"
+        row = self._get_complete(movie_id)
+        if row:
+            if row.adult and not include_adult:
+                return None
+            return self._row_to_detail(row)
 
-        result = call_tmdb_api(endpoint)
+        result = call_tmdb_api(f"/movie/{movie_id}?language=fr-FR")
+        if not result or "id" not in result:
+            logger.warning("TMDB sans résultat pour le film %s : %s", movie_id, result)
+            return None
+        save_in_background(("movie", result["id"]), self._save, result)
 
         if not include_adult and result.get("adult"):
             return None
@@ -35,9 +56,81 @@ class MovieRepository(IMovieRepository):
             video=result["video"],
             infos_complete=True
         )
-
         return movie
 
+    def _get_complete(self, movie_id: int):
+        with SessionLocal() as session:
+            return session.scalars(
+                select(DBMovie)
+                .where(DBMovie.id == movie_id, DBMovie.infos_complete.is_(True))
+                .options(selectinload(DBMovie.genre))
+            ).first()
+
+    def _row_to_detail(self, row) -> MovieDetail:
+        return MovieDetail(
+            id=row.id,
+            adult=row.adult,
+            backdrop_path=row.backdrop_path,
+            budget=row.budget,
+            genres=[{"id": g.id, "name": g.name} for g in row.genre],
+            original_language=row.original_language,
+            original_title=row.original_title,
+            overview=row.overview,
+            poster_path=row.poster_path,
+            release_date=row.release_date.isoformat() if row.release_date else "",
+            revenue=row.revenue,
+            runtime=row.runtime,
+            status=row.status,
+            title=row.title,
+            video=row.video,
+            infos_complete=True
+        )
+
+    def _save(self, data: dict) -> None:
+        values = dict(
+            id=data["id"],
+            adult=data.get("adult"),
+            backdrop_path=data.get("backdrop_path"),
+            budget=data.get("budget"),
+            homepage=data.get("homepage"),
+            imdb_id=data.get("imdb_id"),
+            original_language=data.get("original_language"),
+            original_title=data.get("original_title"),
+            overview=data.get("overview"),
+            poster_path=data.get("poster_path"),
+            release_date=_parse_date(data.get("release_date")),
+            revenue=data.get("revenue"),
+            runtime=data.get("runtime"),
+            status=data.get("status"),
+            tagline=data.get("tagline"),
+            title=data.get("title"),
+            popularity=data.get("popularity"),
+            video=bool(data.get("video")),
+            infos_complete=True
+        )
+        genres = data.get("genres") or []
+
+        with SessionLocal() as session, session.begin():
+            session.execute(
+                insert(DBMovie)
+                .values(**values)
+                .on_conflict_do_update(
+                    index_elements=["id"],
+                    set_={k: v for k, v in values.items() if k != "id"},
+                )
+            )
+            if genres:
+                session.execute(
+                    insert(MovieGenre)
+                    .values([{"id": g["id"], "name": g["name"]} for g in genres])
+                    .on_conflict_do_nothing()
+                )
+            session.execute(delete(t_movie_movie_genre)
+                            .where(t_movie_movie_genre.c.movie_id == data["id"]))
+
+            if genres:
+                session.execute(insert(t_movie_movie_genre)
+                    .values([{"movie_id": data["id"], "genre_id": g["id"]} for g in genres]))
 
     def search(self, search_term: str, include_adult: bool) -> Optional[list[MovieDetail]]:
         adult_str = "true" if include_adult else "false"
@@ -104,7 +197,7 @@ class MovieRepository(IMovieRepository):
         try:
             with SessionLocal() as session:
                 movies = session.query(DBMovie).filter(DBMovie.id.in_(movie_ids))
-                total_runtime = sum(movie.runtime for movie in movies)
+                total_runtime = sum(movie.runtime or 0 for movie in movies)
                 return total_runtime
         except Exception as e:
             print(f"[ERREUR] Exception dans movie_runtime : {e}")
