@@ -29,8 +29,7 @@ from service.quiz_service import QuizService, GENRE_SLUG_TO_ID
 
 load_dotenv()
 
-origins: list[str] = [os.getenv("FRONTEND_BASE_URL")]
-origins: list[str] = [os.getenv("ADMIN_FRONTEND_BASE_URL")]
+origins: list[str] = [os.getenv("FRONTEND_BASE_URL"), os.getenv("ADMIN_FRONTEND_BASE_URL")]
 training_service = TrainingService(RecommendationRepository(), PlaylistRepository())
 scheduler = BackgroundScheduler()
 
