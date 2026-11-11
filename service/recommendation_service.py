@@ -83,8 +83,10 @@ class RecommendationService(IRecommendationService):
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
-    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False) -> List[MovieRecommendation]:
+    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False, seen_set: set | None = None) -> List[MovieRecommendation]:
         genre_medias = self.repository.find_by_genres(EMOTION_GENRE_MAPPING[emotion], include_adult)
+        if seen_set:
+            genre_medias = [m for m in genre_medias if m.id not in seen_set]
         for media in genre_medias:
             media.weight = media.popularity
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
@@ -188,27 +190,24 @@ class RecommendationService(IRecommendationService):
         if favorites_ids and f_fav_reco:
             for media in f_fav_reco.result():
                 for kw in media.keywords:
-                    kw_weights[kw] += 10
+                    kw_weights[kw] += 20
                 for c in media.credits:
                     if c["job_id"] == 96:
-                        actor_weights[c["person_id"]] += 10
+                        actor_weights[c["person_id"]] += 20
                     elif c["job_id"] == 537:
-                        director_weights[c["person_id"]] += 10
+                        director_weights[c["person_id"]] += 20
 
-        seen_set = set(history_ids) | set(favorites_ids) | exclude_set
+        seen_set = set(history_ids) | set(favorites_ids) | set(watchlist_ids) | exclude_set
         if seen_set:
             genre_medias = [m for m in genre_medias if m.id not in seen_set]
 
         candidate_ids = [m.id for m in genre_medias]
 
         if not genre_medias:
-            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult)
+            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult, seen_set=seen_set)
 
-        watchlist_set = set(watchlist_ids)
         for media in genre_medias:
             media.weight = len(media.genres)
-            if media.id in watchlist_set:
-                media.weight += 10
             for kw in media.keywords:
                 media.weight += kw_weights.get(kw, 0)
             for c in media.credits:

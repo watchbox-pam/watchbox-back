@@ -107,8 +107,8 @@ class MovieService(IMovieService):
     def find_by_genre(self, genre: str, include_adult: bool) -> Optional[PopularMovieList]:
         return self.repository.find_by_genre(genre, include_adult)
 
-    def get_random_movies(self, count: int = 50, include_adult: bool = False) -> Optional[List[MovieListItem]]:
-        movies = self.repository.get_random_movies(count, include_adult)
+    def get_random_movies(self, count: int = 50, include_adult: bool = False, user_id=None) -> Optional[List[MovieListItem]]:
+        movies = self.repository.get_random_movies(count, include_adult, user_id)
         if not movies or len(movies) == 0:
             return None
         return movies

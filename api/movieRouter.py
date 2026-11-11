@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
 
-from api.auth.verify_auth_token import get_adult_content
+from api.auth.verify_auth_token import check_jwt_token, get_adult_content
 
 from domain.interfaces.repositories.i_movie_repository import IMovieRepository
 from domain.interfaces.services.i_movie_service import IMovieService
@@ -80,11 +80,12 @@ async def get_movie_by_genre(genre: str, include_adult: bool = Depends(get_adult
 @movie_router.get("/random")
 async def get_random_movies(
     count: int = 50,
+    user_id: str = Depends(check_jwt_token),
     include_adult: bool = Depends(get_adult_content),
     service: IMovieService = Depends(get_movie_service)
 ):
     print(f"count demandé : {count}")
-    movies = service.get_random_movies(count, include_adult)
+    movies = service.get_random_movies(count, include_adult, user_id)
     print(f"movies récupérés : {movies}")
     if movies:
         return movies
