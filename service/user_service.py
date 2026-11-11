@@ -78,6 +78,11 @@ class UserService(IUserService):
             raise Exception("La création de l'utilisateur a échoué")
 
 
+    def get_user_by_id(self, id: str) -> Optional[User]:
+        user = self.repository.get_user_by_id(id)
+        return user
+
+
     def get_user_by_username(self, username: str) -> Optional[User]:
         user = self.repository.get_user_by_username(username)
         return user
