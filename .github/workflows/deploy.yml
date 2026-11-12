@@ -1,17 +1,12 @@
 name: Deploy Watchbox Backend
 
 on:
-  pull_request:
+  push:
     branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: develop tests ci
-    strategy:
-      matrix:
-        python-version: ["3.13"]
-
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -19,7 +14,5 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/watchbox/Bureau/watchbox-code/watchbox-back
-            git pull origin main
-            systemctl restart watchbox-backend
+          script_stop: true
+          script: /home/watchbox/Bureau/watchbox-code/deploy.sh
