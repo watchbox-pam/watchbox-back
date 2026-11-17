@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 from contextlib import asynccontextmanager
@@ -29,12 +30,17 @@ from service.quiz_service import QuizService, GENRE_SLUG_TO_ID
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 origins: list[str] = [os.getenv("FRONTEND_BASE_URL"), os.getenv("ADMIN_FRONTEND_BASE_URL")]
 training_service = TrainingService(RecommendationRepository(), PlaylistRepository())
 scheduler = BackgroundScheduler()
 
 def _train_and_refresh():
-    training_service.build_and_train()
+    try:
+        training_service.build_and_train()
+    except Exception:
+        logger.exception("Entraînement ML échoué, conservation du modèle précédent")
     refresh_ml()
 
 def _prewarm_quiz():
