@@ -1,7 +1,10 @@
+from dataclasses import replace
+
 from fastapi import APIRouter, BackgroundTasks, status
 from fastapi.params import Depends
 from starlette.exceptions import HTTPException
 
+from api.auth.verify_auth_token import check_jwt_token
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.repositories.i_review_repository import IReviewRepository
 from domain.interfaces.services.i_review_service import IReviewService
@@ -29,11 +32,12 @@ def get_review_repository() -> ReviewRepository:
 async def create_review(
     review: Review,
     background_tasks: BackgroundTasks,
+    user_id: str = Depends(check_jwt_token),
     service: IReviewService = Depends(get_review_service),
     repo: ReviewRepository = Depends(get_review_repository)
 ):
     try:
-        is_new_rating = service.create_review(review)
+        is_new_rating = service.create_review(replace(review, userId=user_id))
         if is_new_rating:
             new_count = repo.increment_counter()
             if new_count >= TRAINING_THRESHOLD:

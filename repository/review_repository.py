@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import func
+from sqlalchemy import case, func, literal_column
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from domain.interfaces.repositories.i_review_repository import IReviewRepository
 from domain.models.review import Review, UserInfo
@@ -11,25 +12,33 @@ from database.models import t_review, t_ml_training_counter, User as DBUser
 
 class ReviewRepository(IReviewRepository):
     def create_review(self, review: Review) -> bool:
-        success: bool = False
-        try:
-            with SessionLocal() as session:
-                new_review = t_review.insert().values(
-                    rating=review.rating,
-                    comment=review.comment,
-                    has_spoiler_warning=review.isSpoiler,
-                    movie_id=review.movieId,
-                    tv_id=review.tvId,
-                    tv_episode_id=review.tvEpisodeId,
-                    user_id=review.userId,
-                    created_at=datetime.now()
-                )
-                session.execute(new_review)
-                session.commit()
-                success = True
-        except Exception as e:
-            print(e)
-        return success
+        stmt = pg_insert(t_review).values(
+            rating=review.rating,
+            comment=review.comment,
+            has_spoiler_warning=review.isSpoiler,
+            movie_id=review.movieId,
+            tv_id=review.tvId,
+            tv_episode_id=review.tvEpisodeId,
+            user_id=review.userId,
+            created_at=datetime.now()
+        )
+        if review.movieId is not None:
+            new_comment = stmt.excluded.comment.isnot(None)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["user_id", "movie_id"],
+                index_where=t_review.c.movie_id.isnot(None),
+                set_={
+                    "rating": stmt.excluded.rating,
+                    "comment": func.coalesce(stmt.excluded.comment, t_review.c.comment),
+                    "has_spoiler_warning": case((new_comment, stmt.excluded.has_spoiler_warning),
+                                                else_=t_review.c.has_spoiler_warning),
+                    "created_at": stmt.excluded.created_at,
+                },
+            )
+        with SessionLocal() as session:
+            is_new = session.execute(stmt.returning(literal_column("xmax = 0"))).scalar_one()
+            session.commit()
+        return is_new
 
     def get_reviews_by_media(self, media_id: int) -> List[Review]:
         reviews = []

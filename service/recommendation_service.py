@@ -1,3 +1,4 @@
+import random
 import statistics
 from datetime import date
 from collections import defaultdict
@@ -13,6 +14,14 @@ from domain.models.movieReview import MovieReview
 from service.ml_state import get_ml
 
 SKIP_PENALTY = 0.5
+FAVORITE_PREFERENCE = 1.0
+WATCHLIST_PREFERENCE = 0.5
+VARIETY_POOL = 40
+VARIETY_SHARPNESS = 3
+
+
+def _today() -> date:
+    return date.today()
 EMOTION_WEIGHT = 0.3
 NOSTALGIA_AGE_RANGE = (5, 15)
 NOSTALGIA_FADE_YEARS = 5
@@ -50,6 +59,12 @@ class RecommendationService(IRecommendationService):
         intersection = len(set1 & set2)
         union = len(set1 | set2)
         return intersection / union if union > 0 else 0.0
+
+    def _daily_pick(self, medias: List[MovieRecommendation], limit: int, user_id: str, emotion: Emotion) -> List[MovieRecommendation]:
+        pool = medias[:max(VARIETY_POOL, limit * 3)]
+        rng = random.Random(f"{user_id}:{emotion.value}:{_today().isoformat()}")
+        drawn = sorted(pool, key=lambda m: rng.random() ** (1 / max(m.weight, 1e-6) ** VARIETY_SHARPNESS), reverse=True)
+        return drawn[:limit * 2]
 
     def _diversify(
         self,
@@ -114,8 +129,7 @@ class RecommendationService(IRecommendationService):
         no_playlists = not watchlist_ids and not history_ids and not favorites_ids
         return no_ml and no_playlists
 
-    def _get_cold_start_recommendations(self, emotion: Emotion, limit: int = 10, include_adult: bool = False, seen_set: set | None = None, birth_year: int | None = None) -> List[MovieRecommendation]:
-        genre_medias = self._find_emotion_candidates(emotion, include_adult)
+    def _get_cold_start_recommendations(self, emotion: Emotion, genre_medias: List[MovieRecommendation], user_id: str, limit: int = 10, seen_set: set | None = None, birth_year: int | None = None) -> List[MovieRecommendation]:
         if seen_set:
             genre_medias = [m for m in genre_medias if m.id not in seen_set]
         for media in genre_medias:
@@ -127,7 +141,7 @@ class RecommendationService(IRecommendationService):
                 + self._emotion_score(media, emotion, birth_year) * EMOTION_WEIGHT
             )
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
-        return self._diversify(genre_medias[:50], top_n=limit, diversity_penalty=0.6)[:limit]
+        return self._diversify(self._daily_pick(genre_medias, limit, user_id, emotion), top_n=limit, diversity_penalty=0.6)[:limit]
 
     def get_recommendations(
         self,
@@ -153,7 +167,8 @@ class RecommendationService(IRecommendationService):
         skip_ids       = f_skip.result()
         user_playlists = f_playlists.result()
         swipe_ids      = f_swipes.result()
-        genre_medias   = f_genres.result()
+        emotion_pool   = f_genres.result()
+        genre_medias   = emotion_pool
         birth_year     = f_birth.result()
         if birth_year is not None and date.today().year - birth_year < NOSTALGIA_AGE_RANGE[1]:
             birth_year = None
@@ -187,56 +202,38 @@ class RecommendationService(IRecommendationService):
 
         if self._is_cold_start(user_id, watchlist_ids, history_ids, favorites_ids):
             print(f"Cold start détecté pour user {user_id}")
-            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult, birth_year=birth_year)
+            return self._get_cold_start_recommendations(emotion, emotion_pool, user_id, limit=limit, birth_year=birth_year)
 
         # Phase 3 : données de contenu en parallèle
+        known_ids = list(dict.fromkeys(watchlist_ids + history_ids + favorites_ids))
         with ThreadPoolExecutor() as ex:
-            f_wl_reco   = ex.submit(self.repository.find_by_ids_recommendation, watchlist_ids) if watchlist_ids else None
-            f_hist_reco = ex.submit(self.repository.find_by_ids_recommendation, history_ids)   if history_ids  else None
-            f_fav_reco  = ex.submit(self.repository.find_by_ids_recommendation, favorites_ids) if favorites_ids else None
-            f_reviews   = ex.submit(self.repository.find_with_review, user_id, history_ids)    if history_ids  else None
+            f_known   = ex.submit(self.repository.find_by_ids_recommendation, known_ids)
+            f_reviews = ex.submit(self.repository.find_with_review, user_id, history_ids) if history_ids else None
+
+        history_reviews: List[MovieReview] = f_reviews.result() if f_reviews else []
+        rating_count = len(history_reviews)
+        review_map = defaultdict(list)
+        for r in history_reviews:
+            review_map[r.movie_id].append(r.rating)
+
+        # Une préférence par film, dans [-1, 1] : le favori l'emporte sur la note, la note sur la watchlist
+        preferences: dict = {movie_id: WATCHLIST_PREFERENCE for movie_id in watchlist_ids}
+        preferences.update({movie_id: (statistics.fmean(ratings) - 5) / 5 for movie_id, ratings in review_map.items()})
+        preferences.update({movie_id: FAVORITE_PREFERENCE for movie_id in favorites_ids})
 
         kw_weights: dict = defaultdict(float)
         actor_weights: dict = defaultdict(float)
         director_weights: dict = defaultdict(float)
 
-        if watchlist_ids and f_wl_reco:
-            for media in f_wl_reco.result():
-                for kw in media.keywords:
-                    kw_weights[kw] += 10
-                for c in media.credits:
-                    if c["job_id"] == 96:
-                        actor_weights[c["person_id"]] += 10
-                    elif c["job_id"] == 537:
-                        director_weights[c["person_id"]] += 10
-
-        rating_count = 0
-        if history_ids and f_hist_reco:
-            history_reviews: List[MovieReview] = f_reviews.result() if f_reviews else []
-            rating_count = len(history_reviews)
-            review_map = defaultdict(list)
-            for r in history_reviews:
-                review_map[r.movie_id].append(r.rating)
-            for media in f_hist_reco.result():
-                ratings = review_map[media.id]
-                w = (statistics.fmean(ratings) - 5) if ratings else 0
-                for kw in media.keywords:
-                    kw_weights[kw] += w
-                for c in media.credits:
-                    if c["job_id"] == 96:
-                        actor_weights[c["person_id"]] += w
-                    elif c["job_id"] == 537:
-                        director_weights[c["person_id"]] += w
-
-        if favorites_ids and f_fav_reco:
-            for media in f_fav_reco.result():
-                for kw in media.keywords:
-                    kw_weights[kw] += 20
-                for c in media.credits:
-                    if c["job_id"] == 96:
-                        actor_weights[c["person_id"]] += 20
-                    elif c["job_id"] == 537:
-                        director_weights[c["person_id"]] += 20
+        for media in f_known.result():
+            w = preferences.get(media.id, 0)
+            for kw in media.keywords:
+                kw_weights[kw] += w
+            for c in media.credits:
+                if c["job_id"] == 96:
+                    actor_weights[c["person_id"]] += w
+                elif c["job_id"] == 537:
+                    director_weights[c["person_id"]] += w
 
         seen_set = set(history_ids) | set(favorites_ids) | set(watchlist_ids) | exclude_set
         if seen_set:
@@ -245,7 +242,7 @@ class RecommendationService(IRecommendationService):
         candidate_ids = [m.id for m in genre_medias]
 
         if not genre_medias:
-            return self._get_cold_start_recommendations(emotion, limit=limit, include_adult=include_adult, seen_set=seen_set, birth_year=birth_year)
+            return self._get_cold_start_recommendations(emotion, emotion_pool, user_id, limit=limit, seen_set=seen_set, birth_year=birth_year)
 
         for media in genre_medias:
             media.weight = 0
@@ -284,6 +281,5 @@ class RecommendationService(IRecommendationService):
         genre_medias = sorted(genre_medias, key=lambda x: x.popularity, reverse=True)
         genre_medias = sorted(genre_medias, key=lambda x: x.weight, reverse=True)
 
-        pool_size = max(30, limit * 3)
-        diversified = self._diversify(genre_medias[:pool_size], top_n=limit, diversity_penalty=0.5)
+        diversified = self._diversify(self._daily_pick(genre_medias, limit, user_id, emotion), top_n=limit, diversity_penalty=0.5)
         return diversified[:limit]

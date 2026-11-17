@@ -6,7 +6,10 @@ from domain.models.movie_list_item import MovieListItem
 from utils.tmdb_service import call_tmdb_api
 from database.db import SessionLocal
 from database.models import Movie as DBMovie, Playlist as DBPlaylist, t_swipe, t_review, t_playlist_media
-from sqlalchemy import func, exists
+from sqlalchemy import case, func, exists
+
+SWIPE_POPULARITY_TIERS = (70, 30)
+SWIPE_MIN_POPULARITY = 10
 
 class MovieRepository(IMovieRepository):
     def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[MovieDetail]:
@@ -116,7 +119,7 @@ class MovieRepository(IMovieRepository):
 
         try:
             with SessionLocal() as session:
-                query = session.query(DBMovie).filter(DBMovie.popularity >= 70)
+                query = session.query(DBMovie).filter(DBMovie.popularity >= SWIPE_MIN_POPULARITY)
                 if not include_adult:
                     query = query.filter((DBMovie.adult == False) | (DBMovie.adult == None))
                 if user_id is not None:
@@ -131,7 +134,11 @@ class MovieRepository(IMovieRepository):
                             t_playlist_media.c.movie_id == DBMovie.id,
                         ),
                     )
-                results = query.order_by(func.random()).limit(count).all()
+                popularity_tier = case(
+                    *((DBMovie.popularity >= threshold, rank) for rank, threshold in enumerate(SWIPE_POPULARITY_TIERS)),
+                    else_=len(SWIPE_POPULARITY_TIERS),
+                )
+                results = query.order_by(popularity_tier, func.random()).limit(count).all()
                 for result in results:
                     movies.append(MovieListItem(
                         id=result.id,

@@ -25,13 +25,10 @@ class ReviewService(IReviewService):
 
         if movie_in_history:
             self.playlist_repository.touch_media_in_playlist(user_history_id, review.movieId)
-            return False
+        else:
+            self.playlist_repository.add_media_to_playlist(user_history_id, review.movieId)
 
-        self.playlist_repository.add_media_to_playlist(user_history_id, review.movieId)
-        review_creation = self.repository.create_review(review)
-        if not review_creation:
-            raise Exception("La review n'a pas été ajoutée")
-        return True
+        return self.repository.create_review(review)
 
     def get_reviews_by_media(self, media_id: int) -> List[Review]:
         return self.repository.get_reviews_by_media(media_id)

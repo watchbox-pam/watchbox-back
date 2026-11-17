@@ -474,6 +474,7 @@ t_review = Table(
     ForeignKeyConstraint(['tv_episode_id'], ['tv_episode.id'], name='comment_tv_episode_id_fkey'),
     ForeignKeyConstraint(['tv_id'], ['tv.id'], name='comment_tv_id_fkey'),
     ForeignKeyConstraint(['user_id'], ['user.id'], name='comment_user_id_fkey', ondelete='CASCADE'),
+    Index('uq_review_user_movie', 'user_id', 'movie_id', unique=True, postgresql_where=text('movie_id IS NOT NULL')),
 )
 
 
