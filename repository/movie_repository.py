@@ -25,10 +25,12 @@ class MovieRepository(IMovieRepository):
     def find_by_id(self, movie_id: int, include_adult: bool) -> Optional[MovieDetail]:
         row = self._get_complete(movie_id)
         if row:
+            logger.warning("[CACHE HIT] film %s lu depuis la BDD", movie_id)
             if row.adult and not include_adult:
                 return None
             return self._row_to_detail(row)
 
+        logger.warning("[CACHE MISS] film %s : appel TMDB", movie_id)
         result = call_tmdb_api(f"/movie/{movie_id}?language=fr-FR")
         if not result or "id" not in result:
             logger.warning("TMDB sans résultat pour le film %s : %s", movie_id, result)
@@ -131,6 +133,7 @@ class MovieRepository(IMovieRepository):
             if genres:
                 session.execute(insert(t_movie_movie_genre)
                     .values([{"movie_id": data["id"], "genre_id": g["id"]} for g in genres]))
+        logger.warning("[SAVED] film %s enregistré en BDD", data["id"])
 
     def search(self, search_term: str, include_adult: bool) -> Optional[list[MovieDetail]]:
         adult_str = "true" if include_adult else "false"

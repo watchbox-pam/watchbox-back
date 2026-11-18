@@ -1,33 +1,26 @@
-import json
 import logging
-import os
-import requests
-from dotenv import load_dotenv
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import Callable, Hashable
 
-load_dotenv()
 logger = logging.getLogger(__name__)
+_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="db-save")
+_in_flight: set[Hashable] = set()
+_lock = threading.Lock()
 
-def call_tmdb_api(endpoint: str):
-    base_url = os.getenv("TMDB_BASE_URL")
-    api_key = os.getenv("TMDB_API_KEY")
+def save_in_background(key: Hashable, fn: Callable, *args) -> None:
+    with _lock:
+        if key in _in_flight:
+            return
+        _in_flight.add(key)
 
-    if not base_url or not api_key:
-        logger.error("TMDB_BASE_URL ou TMDB_API_KEY manquant")
-        return {"error": "Missing TMDB_BASE_URL or TMDB_API_KEY"}
-
-    url = base_url + endpoint
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
+    def task():
         try:
-            return response.json()
-        except ValueError:
-            logger.error("Réponse TMDB non JSON (%s) pour %s", response.status_code, endpoint)
-            return {"error": "Invalid JSON response"}
-    except requests.exceptions.RequestException as e:
-        logger.error("Appel TMDB échoué pour %s : %s", endpoint, e)
-        return {"error": str(e)}
+            fn(*args)
+        except Exception:
+            logger.exception("Sauvegarde %s échouée", key)
+        finally:
+            with _lock:
+                _in_flight.discard(key)
+
+    _executor.submit(task)
