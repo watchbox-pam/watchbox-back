@@ -6,9 +6,11 @@ from repository.movie_repository import MovieRepository
 
 class TestMovieRepository:
 
-    # simuler la réponse de l'API TMDB
+    # simuler la réponse de l'API TMDB (cache BDD vide, sauvegarde mockée : aucun accès BDD)
+    @patch('repository.movie_repository.save_in_background')
+    @patch.object(MovieRepository, '_get_complete', return_value=None)
     @patch('repository.movie_repository.call_tmdb_api')
-    def test_find_by_id(self, mock_call_tmdb_api):
+    def test_find_by_id(self, mock_call_tmdb_api, mock_get_complete, mock_save):
         # Simulation de la réponse de l'API pour un film spécifique
         mock_call_tmdb_api.return_value = {
             "id": 123,
@@ -43,6 +45,10 @@ class TestMovieRepository:
 
         # Vérification que la méthode de l'API a bien été appelée avec le bon endpoint
         mock_call_tmdb_api.assert_called_once_with("/movie/123?language=fr-FR")
+        mock_get_complete.assert_called_once_with(123)
+        # Le film est mis en cache en arrière-plan
+        mock_save.assert_called_once()
+        assert mock_save.call_args.args[0] == ("movie", 123)
 
     # Test de la méthode 'search' du repository des films
     @patch('repository.movie_repository.call_tmdb_api')
