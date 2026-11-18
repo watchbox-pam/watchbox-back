@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import patch, MagicMock
-import json
 import requests
 from utils.tmdb_service import call_tmdb_api
 
@@ -10,7 +9,7 @@ from utils.tmdb_service import call_tmdb_api
 @patch('utils.tmdb_service.requests.get')
 def test_call_tmdb_api_success(mock_get):
     mock_response = MagicMock()
-    mock_response.text = json.dumps({"id": 123, "title": "Test Movie"})
+    mock_response.json.return_value = {"id": 123, "title": "Test Movie"}
     mock_get.return_value = mock_response
 
     result = call_tmdb_api("/movie/123")
@@ -28,7 +27,7 @@ def test_call_tmdb_api_success(mock_get):
 ])
 def test_call_tmdb_api_with_different_endpoints(mock_get, endpoint, expected_id):
     mock_response = MagicMock()
-    mock_response.text = json.dumps({"id": expected_id})
+    mock_response.json.return_value = {"id": expected_id}
     mock_get.return_value = mock_response
 
     result = call_tmdb_api(endpoint)
@@ -40,7 +39,7 @@ def test_call_tmdb_api_with_different_endpoints(mock_get, endpoint, expected_id)
 @patch('utils.tmdb_service.requests.get')
 def test_call_tmdb_api_with_error_response(mock_get):
     mock_response = MagicMock()
-    mock_response.text = json.dumps({"status_code": 404, "status_message": "Not Found"})
+    mock_response.json.return_value = {"status_code": 404, "status_message": "Not Found"}
     mock_get.return_value = mock_response
 
     # Film inexistant
@@ -55,8 +54,8 @@ def test_call_tmdb_api_with_error_response(mock_get):
 def test_call_tmdb_api_invalid_json(mock_get):
     mock_response = MagicMock()
 
-    # Simule un corps de réponse invalide
-    mock_response.text = "INVALID_JSON"
+    # Simule un corps de réponse invalide : response.json() lève une ValueError
+    mock_response.json.side_effect = ValueError("Invalid JSON")
     mock_get.return_value = mock_response
 
     result = call_tmdb_api("/movie/invalid")
