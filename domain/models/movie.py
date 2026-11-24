@@ -21,7 +21,7 @@ class MovieDetail:
     runtime: int
     status: str
     title: str
-    video: str
+    video: Optional[bool]
     infos_complete: bool
     age_restriction: Optional[str] = None
     casting: Optional[list] = None
@@ -46,7 +46,7 @@ class Movie:
     runtime: int
     status: str
     title: str
-    video: str
+    video: Optional[bool]
     infos_complete: bool
 
 class PopularMovieListItem:
