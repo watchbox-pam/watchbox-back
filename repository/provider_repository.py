@@ -69,3 +69,12 @@ class ProviderRepository:
             return "buy"
         else:
             return "unknown"
+
+    def get_movie_imports(self) -> List[Dict[str, Any]]:
+        """
+        Get all available import options for streaming providers
+        """
+
+        imports = [{"id": 1, "logo_path": "/rK1KljqmbvO9HQa1PBFLILWah72.png", "name": "Netflix"}, {"id": 2, "logo_path": "/rK1KljqmbvO9HQa1PBFLILWah72.png", "name": "Letterboxd"}]
+    
+        return imports

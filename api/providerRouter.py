@@ -24,3 +24,10 @@ async def get_movie_providers(movie_id: int, service: IProviderService = Depends
     Get streaming providers for a specific movie
     """
     return service.get_movie_providers(movie_id)
+
+@provider_router.get("/imports")
+async def get_movie_imports(service: IProviderService = Depends(get_provider_service)) -> List[Dict[str, Any]]:
+    """
+    Get all available import options for streaming providers
+    """
+    return service.get_movie_imports()

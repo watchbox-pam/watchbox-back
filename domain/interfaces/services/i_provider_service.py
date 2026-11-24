@@ -12,3 +12,9 @@ class IProviderService(Protocol):
         Get streaming providers for a specific movie
         """
         ...
+
+    def get_movie_imports(self) -> List[Dict[str, Any]]:
+        """
+        Get all available import options for streaming providers
+        """
+        ...

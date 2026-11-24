@@ -1,6 +1,8 @@
 import datetime
 from typing import Optional, List
 import uuid
+import pandas as pd
+import zipfile
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.playlist import Playlist
@@ -11,9 +13,10 @@ from database.models import Playlist as DBPlaylist
 from database.models import User as DBUser
 from database.models import t_playlist_media
 from database.models import Movie as DBMovie
-from sqlalchemy import select, insert, delete, update
+from sqlalchemy import select, insert, delete, update, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from utils.tmdb_service import call_tmdb_api
+from domain.models.playlist import ImportProvider
 
 class PlaylistRepository(IPlaylistRepository):
     def create_playlist(self, playlist: Playlist) -> bool:
@@ -301,3 +304,81 @@ class PlaylistRepository(IPlaylistRepository):
             print(e)
 
         return success
+
+    def add_file_to_watchlist(self, user_id, file, import_id) -> bool:
+        try:
+            movie_names = []
+
+            match import_id:
+                case ImportProvider.LETTERBOXD.value:
+                    if file.content_type != "application/zip":
+                        raise Exception("Le fichier doit être un fichier zip pour l'import Letterboxd.")
+                    with zipfile.ZipFile(file.file) as z:
+                        # look for file "watched.csv" in the zip
+                        if "watched.csv" in z.namelist():
+                            with z.open("watched.csv") as f:
+                                extracted_data = pd.read_csv(f, usecols=[1], skiprows=1)
+                                movie_names = (
+                                    extracted_data.iloc[:, 0]
+                                    .str.replace("\xa0", " ", regex=False)
+                                    .str.strip()
+                                )
+                        else:
+                            raise Exception("Le fichier zip ne contient pas 'watched.csv'.")
+
+                case ImportProvider.NETFLIX.value:   
+                    if file.content_type != "text/comma-separated-values":
+                        raise Exception("Le fichier doit être un fichier CSV pour l'import Netflix.")
+                    extracted_data = pd.read_csv(file.file, usecols=[0], skiprows=1)
+                    movie_names = (
+                        extracted_data.iloc[:, 0]
+                        .str.replace("\xa0", " ", regex=False)
+                        .str.strip()
+                    )
+                    movie_names = [name for name in movie_names.tolist() if name]
+            
+            with SessionLocal() as session:
+
+                # Get the watchlist playlist for the current user
+                watchlist_playlist = session.query(DBPlaylist).filter(
+                    DBPlaylist.user_id == user_id,
+                    DBPlaylist.title == "Watchlist"
+                ).first()
+
+                if not watchlist_playlist:
+                    raise Exception("Watchlist playlist not found for the current user.")
+
+                movie_ids = []
+                for movie_name in movie_names:
+                    # Search for the movie in the database
+                    movie = session.query(DBMovie).filter(
+                        (DBMovie.title.ilike(f"%{movie_name}%")) |
+                        (DBMovie.original_title.ilike(f"%{movie_name}%"))
+                    ).first()
+
+                    if movie:
+                        movie_ids.append(movie.id)
+                    """ else:
+                        # If the movie is not found, you can choose to log it or handle it as needed
+                        print(f"Not found movie '{movie_name}' in the database.") """
+
+                # Add the found movie IDs to the watchlist playlist
+                for movie_id in movie_ids:
+                    session.execute(
+                        pg_insert(t_playlist_media).values(
+                            playlist_id=watchlist_playlist.id,
+                            movie_id=movie_id,
+                            add_date=datetime.datetime.now()
+                        ).on_conflict_do_nothing(
+                            index_elements=["playlist_id", "movie_id"],
+                            index_where=text("movie_id IS NOT NULL")
+                        )
+                    )
+
+                session.commit()
+
+                return True
+        except Exception as e:
+            print(e)
+
+        return False

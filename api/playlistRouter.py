@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi import UploadFile, File
 from typing import List, Optional
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.interfaces.services.i_playlist_service import IPlaylistService
@@ -8,6 +9,7 @@ from repository.movie_repository import MovieRepository
 from repository.playlist_repository import PlaylistRepository
 from service.playlist_service import PlaylistService
 from domain.models.playlist import PlaylistUpdateRequest, RuntimeResponse
+from api.auth.verify_auth_token import check_jwt_token
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -110,3 +112,20 @@ async def get_playlist_runtime(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur serveur : {str(e)}")
+    
+@playlist_router.post("/import/{import_id}", response_model=bool)
+async def add_file_to_watchlist(
+    service: IPlaylistService = Depends(get_playlist_service),
+    user_id: str = Depends(check_jwt_token),
+    file: UploadFile = File(...),
+    import_id: str = ""
+):
+    """
+    Add imported file to the playlist
+    """
+    if not import_id:
+        raise HTTPException(status_code=400, detail="Import ID is required")
+    success = service.add_file_to_watchlist(user_id, file, import_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Erreur lors de l'ajout du média à la playlist")
+    return success

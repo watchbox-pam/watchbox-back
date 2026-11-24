@@ -1,4 +1,5 @@
 from typing import Optional, List, Protocol
+from fastapi import UploadFile, File
 
 from domain.models.movie import MediaItem
 from domain.models.playlist import Playlist
@@ -30,4 +31,7 @@ class IPlaylistService(Protocol):
         ...
 
     def get_movie_runtime_by_playlist_title(self, playlist_id: str) -> dict:
+        ...
+
+    def add_file_to_watchlist(self, user_id: str, file: UploadFile, import_id: str) -> bool:
         ...

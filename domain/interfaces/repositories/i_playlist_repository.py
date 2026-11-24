@@ -1,4 +1,6 @@
 from typing import Optional, List, Protocol
+from fastapi import UploadFile, File
+
 
 from domain.models.movie import MediaItem
 from domain.models.playlist import Playlist
@@ -40,4 +42,7 @@ class IPlaylistRepository(Protocol):
         ...
 
     def remove_media_from_playlist(self, playlist_id: str, media_id: int) -> bool:
+        ...
+
+    def add_file_to_watchlist(self, user_id: str, file: UploadFile, import_id: str) -> bool:
         ...

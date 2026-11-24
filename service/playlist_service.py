@@ -9,6 +9,7 @@ from typing import Optional, List
 from datetime import datetime
 
 from fastapi import HTTPException
+from fastapi import UploadFile, File
 
 from domain.interfaces.repositories.i_playlist_repository import IPlaylistRepository
 from domain.models.movie import MediaItem
@@ -129,4 +130,15 @@ class PlaylistService(IPlaylistService):
             return {"total_runtime": total_runtime, "movie_count": movie_count}
         except Exception as e:
             logger.error(f"Erreur interne : {e}")
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
+
+    def add_file_to_watchlist(self, user_id, file: UploadFile, import_id: str) -> bool:
+        try:
+            success = self.repository.add_file_to_watchlist(user_id, file, import_id)
+            if not success:
+                raise HTTPException(status_code=400, detail="Impossible d'ajouter le fichier à la watchlist.")
+            return success
+        except HTTPException:
+            raise
+        except Exception as e:
             raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")

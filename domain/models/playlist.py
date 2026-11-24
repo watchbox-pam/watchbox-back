@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
+from enum import Enum
 
 @dataclass(frozen=True)
 class Playlist:
@@ -19,3 +20,7 @@ class PlaylistUpdateRequest(BaseModel):
 class RuntimeResponse(BaseModel):
     total_runtime: int
     movie_count: int
+
+class ImportProvider(Enum):
+    NETFLIX = "1"
+    LETTERBOXD = "2"
