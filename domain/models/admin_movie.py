@@ -20,7 +20,7 @@ class AdminMovieUpdate(BaseModel):
     status: Optional[str] = None
     tagline: Optional[str] = None
     title: Optional[str] = None
-    video: Optional[str] = None
+    video: Optional[bool] = None
     infos_complete: Optional[bool] = None
 
 
@@ -42,5 +42,5 @@ class AdminMovieCreate(BaseModel):
     tagline: Optional[str] = None
     title: Optional[str] = None
     popularity: Optional[float] = None
-    video: Optional[str] = None
+    video: Optional[bool] = None
     infos_complete: Optional[bool] = False
