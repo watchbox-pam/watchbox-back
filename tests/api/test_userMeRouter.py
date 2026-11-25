@@ -85,3 +85,25 @@ def test_onboarding_status_and_complete(client, service):
     assert response.status_code == 200
     assert response.json()["onboarding_completed"] is True
     service.complete_onboarding.assert_called_once_with(USER_ID)
+
+
+def test_onboarding_movies_route():
+    from api.auth.verify_auth_token import get_adult_content
+    from api.userMeRouter import get_onboarding_movie_service
+    from domain.models.movie_list_item import MovieListItem
+
+    movie_service = Mock()
+    movie_service.get_onboarding_movies.return_value = [MovieListItem(id=1, title="Film", poster_path="/1.jpg")]
+    app = FastAPI()
+    app.include_router(user_me_router)
+    app.dependency_overrides[check_jwt_token] = lambda: USER_ID
+    app.dependency_overrides[get_adult_content] = lambda: False
+    app.dependency_overrides[get_onboarding_movie_service] = lambda: movie_service
+    client = TestClient(app)
+
+    response = client.get("/users/me/onboarding/movies")
+
+    assert response.status_code == 200
+    assert response.json() == [{"id": 1, "title": "Film", "poster_path": "/1.jpg"}]
+    movie_service.get_onboarding_movies.assert_called_once_with(USER_ID, 15, False)
+    assert client.get("/users/me/onboarding/movies?count=100").status_code == 422
