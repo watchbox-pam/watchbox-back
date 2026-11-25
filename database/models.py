@@ -365,6 +365,8 @@ class User(Base):
 
     country_: Mapped[Optional['Country']] = relationship('Country', back_populates='user')
     playlist: Mapped[list['Playlist']] = relationship('Playlist', back_populates='user', cascade='all, delete-orphan')
+    # NULL tant que l'utilisateur n'a pas terminé (ou passé) le parcours d'onboarding
+    onboarding_completed_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, default=None)
 
 
 class UserIdentity(Base):
@@ -551,4 +553,15 @@ t_quiz_score = Table(
     ForeignKeyConstraint(['user_id'], ['user.id'], name='quiz_score_user_id_fkey', ondelete='CASCADE'),
     UniqueConstraint('user_id', 'genre_slug', name='uq_quiz_score_user_genre'),
     PrimaryKeyConstraint('id', name='quiz_score_pkey')
+)
+
+
+t_user_media_provider = Table(
+    'user_media_provider', Base.metadata,
+    Column('user_id', Uuid, nullable=False),
+    Column('media_provider_id', Integer, nullable=False),
+    Column('created_at', DateTime, server_default=text('now()'), nullable=False),
+    ForeignKeyConstraint(['user_id'], ['user.id'], name='user_media_provider_user_id_fkey', ondelete='CASCADE'),
+    ForeignKeyConstraint(['media_provider_id'], ['media_provider.id'], name='user_media_provider_media_provider_id_fkey', ondelete='CASCADE'),
+    PrimaryKeyConstraint('user_id', 'media_provider_id', name='user_media_provider_pkey')
 )
