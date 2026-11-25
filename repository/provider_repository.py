@@ -18,6 +18,7 @@ class ProviderRepository:
                     "id": item.get("provider_id"),
                     "name": item.get("provider_name", ""),
                     "logo_path": item.get("logo_path"),
+                    "display_priority": (item.get("display_priorities") or {}).get("FR", item.get("display_priority")),
                 })
 
         return providers

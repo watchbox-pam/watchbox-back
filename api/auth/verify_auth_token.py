@@ -68,7 +68,8 @@ def get_user_by_id(id: str) -> Optional[User]:
                     verification_code=result.verification_code,
                     verification_code_token=result.verification_code_token,
                     country_=result.country_,
-                    playlist=result.playlist
+                    playlist=result.playlist,
+                    onboarding_completed_at=result.onboarding_completed_at
                 )
 
     except Exception as e:

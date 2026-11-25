@@ -85,7 +85,7 @@ class UserService(IUserService):
             send_mail(user.email, "Vérification de votre compte Watchbox", html)
             self.playlist_repository.create_playlist_on_register(user_id=user.id)
             user_token = create_jwt_token({"user_id": str(user_id)})
-            return { "user_id": str(user_id), "token": user_token, "verification_code_token": verification_code_token }
+            return { "user_id": str(user_id), "token": user_token, "verification_code_token": verification_code_token, "onboarding_completed": False }
         else:
             raise Exception("La création de l'utilisateur a échoué")
 
@@ -137,7 +137,8 @@ class UserService(IUserService):
             return {
                 "user_id": str(user_exists.id),
                 "token": user_token,
-                "username": user_exists.username
+                "username": user_exists.username,
+                "onboarding_completed": self._is_onboarding_completed(user_exists)
             }
         else:
             raise Exception("Mot de passe incorrect")
@@ -353,8 +354,13 @@ class UserService(IUserService):
             "status": "logged_in",
             "user_id": str(user.id),
             "token": create_jwt_token({"user_id": str(user.id)}),
-            "username": user.username
+            "username": user.username,
+            "onboarding_completed": UserService._is_onboarding_completed(user)
         }
+
+    @staticmethod
+    def _is_onboarding_completed(user) -> bool:
+        return getattr(user, "onboarding_completed_at", None) is not None
 
     def _suggest_username(self, claims: dict, email: str) -> str:
         """Pseudo proposé à partir du prénom Google (l'utilisateur peut le modifier)."""

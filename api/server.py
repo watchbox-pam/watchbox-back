@@ -16,6 +16,7 @@ from api.movieRouter import movie_router
 from api.providerRouter import provider_router
 from api.recommendationRouter import recommendation_router
 from api.userRouter import user_router
+from api.userMeRouter import user_me_router
 from api.playlistRouter import playlist_router
 from api.personRouter import person_router
 from api.reviewRouter import review_router
@@ -73,6 +74,7 @@ def initServer(app: FastAPI) -> AppType:
     app.include_router(movie_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(recommendation_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(user_router)
+    app.include_router(user_me_router)
     app.include_router(admin_router)
     app.include_router(playlist_router, dependencies=[Depends(check_jwt_token)])
     app.include_router(person_router, dependencies=[Depends(check_jwt_token)])

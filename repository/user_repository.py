@@ -82,7 +82,8 @@ class UserRepository(IUserRepository):
                         verification_code=result.verification_code,
                         verification_code_token=result.verification_code_token,
                         country_=result.country_,
-                        playlist=result.playlist
+                        playlist=result.playlist,
+                        onboarding_completed_at=result.onboarding_completed_at
                     )
         except Exception as e:
             print(e)
@@ -117,7 +118,8 @@ class UserRepository(IUserRepository):
                         verification_code=result.verification_code,
                         verification_code_token=result.verification_code_token,
                         country_=result.country_,
-                        playlist=result.playlist
+                        playlist=result.playlist,
+                        onboarding_completed_at=result.onboarding_completed_at
                     )
 
         except Exception as e:
@@ -153,7 +155,8 @@ class UserRepository(IUserRepository):
                         verification_code=result.verification_code,
                         verification_code_token=result.verification_code_token,
                         country_=result.country_,
-                        playlist=result.playlist
+                        playlist=result.playlist,
+                        onboarding_completed_at=result.onboarding_completed_at
                     )
 
         except Exception as e:

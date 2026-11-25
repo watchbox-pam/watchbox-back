@@ -146,3 +146,11 @@ def test_unverified_google_email_is_refused():
 
     with pytest.raises(Exception, match="pas vérifiée"):
         service.login_with_google("id-token")
+
+
+def test_logged_in_response_exposes_onboarding_status():
+    pending = SimpleNamespace(id=uuid.uuid4(), username="alice", onboarding_completed_at=None)
+    done = SimpleNamespace(id=uuid.uuid4(), username="bob", onboarding_completed_at=datetime.datetime(2026, 11, 24))
+
+    assert UserService._logged_in_response(pending)["onboarding_completed"] is False
+    assert UserService._logged_in_response(done)["onboarding_completed"] is True
